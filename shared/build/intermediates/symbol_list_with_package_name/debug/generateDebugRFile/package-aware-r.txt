@@ -1,0 +1,2 @@
+com.henryg.obdcarplay.shared
+xml automotive_app_desc
