@@ -7,7 +7,11 @@ import com.henryg.obdcarplay.ui.obdcluster.ObdCarScreen
 
 class MyCarAppSession : Session() {
     override fun onCreateScreen(intent: Intent): Screen {
-        val viewModel = ObdViewModelBase()
+        val viewModel = object : ObdViewModelBase() {
+            override fun nativeFetchNextMockData() {
+                // TODO: implement native data fetch for automotive
+            }
+        }
         return ObdCarScreen(carContext, viewModel)
     }
 }

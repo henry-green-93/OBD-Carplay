@@ -17,6 +17,15 @@
             android:name="com.google.android.gms.car.application"
             android:resource="@xml/automotive_app_desc" />
 
+        <service
+            android:name="androidx.car.app.CarAppMetadataHolderService"
+            tools:node="replace">
+            <meta-data
+                android:name="androidx.car.app.CarAppMetadataHolderService.CAR_HARDWARE_MANAGER"
+                android:value="androidx.car.app.hardware.ProjectedCarHardwareManager"
+                tools:replace="android:value" />
+        </service>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

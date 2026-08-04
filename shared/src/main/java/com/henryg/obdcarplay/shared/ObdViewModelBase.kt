@@ -1,6 +1,9 @@
 package com.henryg.obdcarplay.shared
 
 import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +19,8 @@ abstract class ObdViewModelBase : ViewModel() {
 
     private val _obdState = MutableStateFlow(ObdData())
     val obdState: StateFlow<ObdData> = _obdState
+
+    private val viewModelScope = CoroutineScope(Dispatchers.Main + Job())
 
     init {
         viewModelScope.launch {

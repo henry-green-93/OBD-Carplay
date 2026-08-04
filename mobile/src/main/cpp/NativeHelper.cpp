@@ -12,8 +12,9 @@ static jmethodID update_data_id;
 static jfieldID water_temp_id;
 static jfieldID oil_temp_id;
 static jfieldID afr_boost_id;
-
+/*
 extern "C" JNIEXPORT void JNICALL
+ * commenting out due to duplicate declarations (already exists in Natives.h)
 Java_com_henryg_obdcarplay_vm_ObdViewModel_updateData(
     JNIEnv* env,
     jobject obj,
@@ -26,7 +27,7 @@ Java_com_henryg_obdcarplay_vm_ObdViewModel_updateData(
     // In a full implementation, we'd do this once in an init function
     // to save CPU cycles every 16ms.
 }
-
+*/
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_henryg_obdcarplay_vm_ObdViewModel_getNativeTimestamp(
     JNIEnv* env,

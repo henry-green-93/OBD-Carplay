@@ -38,7 +38,7 @@ android {
     externalNativeBuild {
         cmake {
             path("src/main/cpp/CMakeLists.txt")
-            version "3.10.0"
+            version = "3.10.2"
         }
     }
 }
@@ -48,6 +48,9 @@ dependencies {
     implementation(project(":shared"))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.app.projected)
+    implementation(libs.androidx.app.automotive) {
+        exclude(group = "androidx.car.app", module = "app")
+    }
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)

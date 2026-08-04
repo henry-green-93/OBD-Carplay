@@ -18,11 +18,11 @@ import com.henryg.obdcarplay.vm.ObdViewModel
  * - AFR + Boost Pressure
  */
 @Composable
-fun ObdNumericCluster(viewModel: ObdViewModel) {
+fun ObdNumericCluster(viewModel: ObdViewModel, modifier: Modifier = Modifier) {
     val data by viewModel.obdState.collectAsState()
 
     Surface(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
         Column(

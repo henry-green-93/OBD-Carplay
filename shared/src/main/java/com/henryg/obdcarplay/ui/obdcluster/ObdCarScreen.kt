@@ -3,7 +3,7 @@ package com.henryg.obdcarplay.ui.obdcluster
 import androidx.car.app.CarContext
 import androidx.car.app.Screen
 import androidx.car.app.model.Action
-import androidx.car.app.model.Metric
+import androidx.car.app.model.CarText
 import androidx.car.app.model.Template
 import com.henryg.obdcarplay.shared.ObdViewModelBase
 
@@ -19,27 +19,11 @@ class ObdCarScreen(carContext: CarContext, viewModel: ObdViewModelBase) : Screen
 
     override fun onGetTemplate(): Template {
         val data = _viewModel.obdState.value
-        val waterMetric = Metric.Builder()
-            .setText("${data.waterTemp}\u00B0C")
-            .setSecondaryText("Water Temp")
-            .build()
-
-        val oilMetric = Metric.Builder()
-            .setText("${data.oilTemp}\u00B0C")
-            .setSecondaryText("Oil Temp")
-            .build()
-
-        val afrMetric = Metric.Builder()
-            .setText(data.afrBoostDisplay)
-            .setSecondaryText("AFR + Boost")
-            .build()
-
         return androidx.car.app.model.MessageTemplate.Builder(
-            "OBD2 Cluster"
+            CarText.create("${data.waterTemp}\u00B0C")
         )
             .setHeaderAction(Action.APP_ICON)
-            .setPrimaryText("OBD2 Numeric Cluster")
-            .setMetrics(listOf(waterMetric, oilMetric, afrMetric))
+            .setTitle("OBD2 Numeric Cluster")
             .build()
     }
 }
