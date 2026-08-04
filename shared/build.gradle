@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.library'
 }
+
 android {
     namespace 'com.henryg.obdcarplay.shared'
     compileSdk 36
@@ -16,6 +17,10 @@ android {
         targetCompatibility JavaVersion.VERSION_11
     }
 }
+
 dependencies {
-    implementation libs.androidx.app
+    implementation libs.androidx.app.automotive
+    implementation libs.androidx.lifecycle.runtime.ktx
+    implementation libs.androidx.lifecycle.viewmodel.ktx
+    implementation libs.kotlinx.coroutines.android
 }
