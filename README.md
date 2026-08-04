@@ -2,38 +2,68 @@
 
 A high-frequency Android application designed to read and visualize OBD2 information from a car's ECU in real-time. Optimized for the **QCM6125 SOC**, aiming for a data refresh rate as close to **60Hz** as possible.
 
-## 🚀 Project Overview
-This project establishes a bridge between native C++ processing (for high-frequency USB/HIDL burst data) and a modern **Jetpack Compose** UI using **Material3**.
+## Project Structure
+
+This project uses a multi-module Gradle setup targeting three Android platforms:
+
+| Module | Target Platform | UI Technology |
+|---|---|---|
+| `:mobile` | Phones & Tablets (Android 14+) + Android Auto (Projected) | Jetpack Compose |
+| `:automotive` | Android Automotive OS (standalone) | Car App Library (Template API) |
+| `:shared` | Shared library (data model, base ViewModel, Car App service/session) | N/A |
+
+## Core Architecture
+
+```
+OBD-Carplay/
+├── shared/           # ObdData model + ObdViewModelBase + Car App Service/Session
+├── mobile/           # Phones/tablets: Compose UI + native C++ JNI bridge (cmake)
+└── automotive/       # Android Automotive: Car App Template-based OBD display
+```
+
+### Data Flow
+
+1. **Native C++ layer** (`mobile/src/main/cpp/`) - USB/HIDL ISO-TP polling, sin/cos mock data
+2. **Kotlin ViewModel** (`mobile/vm/ObdViewModel.kt`) - extends `ObdViewModelBase`, calls JNI
+3. **Shared model** (`shared/ObdData.kt`) - `ObdData(waterTemp, oilTemp, afr, boostKpa)`
+4. **UI layers** - Compose (mobile) / Templates (automotive) consume `StateFlow<ObdData>`
 
 ## 🏗️ Current Progress
-- [x] **Project Scaffolding**: Set up `build.gradle` with Compose and Material3 dependencies.
-- [x] **Native Bridge**: Initialized CMake and JNI stubs (`Natives.h`, `NativeHelper.cpp`) to handle low-level data processing.
-- [x] **UI Layer**: Created a Numeric Cluster UI (`ObdNumericCluster`) to display key metrics without the overhead of complex needles.
-- [x] **State Management**: Implemented `ObdViewModel` using `StateFlow` to provide a reactive stream of data to the UI.
 
-## 📦 Components & Documentation
+- [x] **Project Scaffolding**: `:mobile`, `:automotive`, `:shared` modules with Car App support
+- [x] **Native Bridge**: CMake + JNI stubs (`Natives.h`, `NativeHelper.cpp`) for low-level data
+- [x] **Mobile UI**: `ObdNumericCluster` Compose screen with Material3 NumericCard widgets
+- [x] **Automotive UI**: `ObdCarScreen` using Car App `MessageTemplate` with `Metric` objects
+- [x] **Shared Layer**: `ObdData` data class + `ObdViewModelBase` with 60Hz polling loop
 
-### 📱 UI Layer
-- **`ObdNumericCluster.kt`**: The main UI component. It renders a BentoGrid-style cluster of numeric values.
-    - *Status*: Finished (Numeric-only).
-    - *Design*: Material3 Surface + Cards.
+## 📦 Component Details
 
-### 🧠 Logic Layer
-- **`ObdViewModel.kt`**: Handles the business logic and state.
-    - `obdState`: A `StateFlow<ObdData>` that the UI observes.
-    - `updateData(water, oil, afr, boost)`: Updates the current state.
+### Mobile (`:mobile`)
+- **`MainActivity.kt`** - Entry point, wires `ObdViewModel` into Compose `ObdNumericCluster`
+- **`ObdViewModel.kt`** (`vm/`) - JNI bindings + sin/cos mock polling at 16ms intervals
+- **`ObdNumericCluster.kt`** (`ui/obdcluster/`) - Compose UI: Material3 Cards layout
+- **Native C++** (`src/main/cpp/`) - JNI declarations, mock data generation
 
-### ⚙️ Native Layer (C++)
-- **`Natives.h`**: Header file for JNI declarations.
-- **`NativeHelper.cpp`**: The core C++ logic. Designed to eventually handle the **9.5ms/iteration** cycle for 60Hz data bursts.
-- **`NativeHelper_Mock.cpp`**: A dedicated mock file to simulate data flow during emulator testing.
+### Automotive (`:automotive`)
+- **`ObdCarScreen.kt`** (`ui/obdcluster/`) - Car App `Screen` with `MessageTemplate` + `Metric`
+- Depends on `CarAppService`, `CarAppSession`, `CarAppActivity`
 
-## 🧪 Development Environment
+### Shared (`:shared`)
+- **`ObdData.kt`** - `data class` with waterTemp, oilTemp, afr, boostKpa + `afrBoostDisplay`
+- **`ObdViewModelBase.kt`** - Abstract base with `StateFlow<ObdData>` polling loop
+- **`MyCarAppService.kt`** - `CarAppService` host validator + session factory
+- **`MyCarAppSession.kt`** - `Session` creating `ObdCarScreen`
+- **`automotive_app_desc.xml`** - declares template usage for Car App
+
+## 🧪 Development
+
 - **Target SOC**: QCM6125
-- **Refresh Target**: 60Hz (~9.5ms per iteration)
-- **Emulator Config**: `.hermes/config-android-emulator-env.sh` provides the checklist and mock HAL stubs.
+- **Refresh Target**: 60Hz (~16ms per iteration)
+- **Min SDK**: 34 (Android 14)
+- **Compile SDK**: 36
 
 ## 🛠️ How to Run
-1. Pull the `ui-numeric-cluster` branch.
-2. Run the build using the Android Emulator.
-3. Check the numeric values for Water Temp, Oil Temp, and AFR+Boost KPA.
+
+1. **Mobile**: Run the `:mobile` module on a phone/tablet AVD (Android 14+) or device
+2. **Automotive**: Run the `:automotive` module on an automotive AVD with templates host
+3. **Android Auto**: The `:mobile` module also registers as a projected Android Auto app

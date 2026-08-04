@@ -11,7 +11,6 @@ include_directories(.)
 # Source files
 set(SOURCES
     NativeHelper.cpp
-    NativeHelper_Mock.cpp
 )
 
 # Generate the library

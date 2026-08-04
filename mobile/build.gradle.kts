@@ -35,6 +35,12 @@ android {
     buildFeatures {
         compose = true
     }
+    externalNativeBuild {
+        cmake {
+            path("src/main/cpp/CMakeLists.txt")
+            version "3.10.0"
+        }
+    }
 }
 
 dependencies {
