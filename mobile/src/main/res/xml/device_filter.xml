@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ELM327 OBD2 adapters - common USB vendor/product IDs -->
+    <!-- FTDI-based adapters (most ELM327 clones) -->
+    <usb-device vendor-id="1027" product-id="24577" /> <!-- FTDI FT232R -->
+    <usb-device vendor-id="1027" product-id="24592" /> <!-- FTDI FT232H -->
+    <usb-device vendor-id="1027" product-id="24593" /> <!-- FTDI FT231XS -->
+    
+    <!-- CDC-ACM adapters (OBDLink, etc.) -->
+    <usb-device class="2" subclass="0" protocol="0" /> <!-- CDC Control -->
+    <usb-device class="255" subclass="6" protocol="1" /> <!-- Vendor Specific -->
+</resources>

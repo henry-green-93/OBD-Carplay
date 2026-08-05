@@ -1,56 +1,46 @@
 package com.henryg.obdcarplay.shared
 
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 
 /**
- * Base ViewModel that provides OBD data polling for all platforms.
+ * Shared base ViewModel for all platforms.
  *
- * Subclasses override [nativeFetchNextMockData] to supply platform-specific
- * data sources (JNI on mobile, AIDL/binder on automotive, etc.).
+ * Manages the OBD data StateFlow and provides lifecycle-safe access
+ * to the current OBD readings. Subclasses override [startPolling] to
+ * supply real or mock data.
+ *
+ * The base class does NOT start polling automatically — that is controlled
+ * by subclasses via [startPolling] and [stopPolling].
  */
 abstract class ObdViewModelBase : ViewModel() {
 
-    private val _obdState = MutableStateFlow(ObdData())
+    private val _obdState = MutableStateFlow(ObdData.Empty)
     val obdState: StateFlow<ObdData> = _obdState
 
-    private val viewModelScope = CoroutineScope(Dispatchers.Main + Job())
-
-    init {
-        viewModelScope.launch {
-            while (true) {
-                nativeFetchNextMockData()
-                _obdState.value = ObdData(
-                    waterTemp = currentWaterTemp,
-                    oilTemp = currentOilTemp,
-                    afr = currentAfr,
-                    boostKpa = currentBoostKpa
-                )
-                delay(16) // ~60Hz polling
-            }
-        }
-    }
-
-    /** Mutable state fields set by [nativeFetchNextMockData]. */
-    protected open var currentWaterTemp: Int = 0
-        protected set
-    protected open var currentOilTemp: Int = 0
-        protected set
-    protected open var currentAfr: Double = 0.0
-        protected set
-    protected open var currentBoostKpa: Int = 0
+    /** Whether the data source is currently connected and active. */
+    var isLive: Boolean = false
         protected set
 
     /**
-     * Called every ~16ms by the polling coroutine.
-     * Subclasses implement this to fetch from native code,
-     * a service, or an emulator.
+     * Called by subclasses to push a new OBD data snapshot.
      */
-    protected abstract fun nativeFetchNextMockData()
+    protected fun updateObdData(data: ObdData) {
+        _obdState.value = data
+    }
+
+    /**
+     * Start the data source (USB polling, service connection, etc.).
+     * Subclasses implement this to start their platform-specific source.
+     */
+    abstract fun startPolling()
+
+    /**
+     * Stop the data source and emit empty data.
+     */
+    fun stopPolling() {
+        isLive = false
+        _obdState.value = ObdData.Empty
+    }
 }

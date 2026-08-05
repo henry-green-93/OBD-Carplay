@@ -14,6 +14,8 @@ appcompat = "1.6.1"
 appProjected = "1.4.0"
 appAutomotive = "1.7.0"
 app = "1.4.0"
+usbSerialForAndroid = "3.7.1"
+okio = "3.6.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -36,10 +38,10 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 androidx-app-projected = { group = "androidx.car.app", name = "app-projected", version.ref = "appProjected" }
 androidx-app-automotive = { group = "androidx.car.app", name = "app-automotive", version.ref = "appAutomotive" }
 androidx-app = { group = "androidx.car.app", name = "app", version.ref = "app" }
+usb-serial-for-android = { group = "com.hoho.android", name = "usb-serial-for-android", version.ref = "usbSerialForAndroid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-
