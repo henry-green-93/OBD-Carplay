@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="mobile">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-08-04T19:03:22.039348338Z">
+        <DropdownSelection timestamp="2026-08-06T18:44:05.249862044Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=21041FDEE000TU" />
+              <DeviceId pluginId="Default" identifier="serial=192.168.0.40:36229;connection=67512c33" />
             </handle>
           </Target>
         </DropdownSelection>
@@ -15,6 +15,13 @@
       </SelectionState>
       <SelectionState runConfigName="automotive">
         <option name="selectionMode" value="DROPDOWN" />
+        <DropdownSelection timestamp="2026-08-04T19:03:22.039348338Z">
+          <Target type="DEFAULT_BOOT">
+            <handle>
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=21041FDEE000TU" />
+            </handle>
+          </Target>
+        </DropdownSelection>
         <DialogSelection />
       </SelectionState>
     </selectionStates>

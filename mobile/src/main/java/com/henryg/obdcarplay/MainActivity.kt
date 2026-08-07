@@ -36,40 +36,41 @@ class MainActivity : ComponentActivity() {
         setContent {
             OBDCarPlayTheme {
                 val context = LocalContext.current
+
+                // Auto-connect to OBD2 reader on startup
+                LaunchedEffect(Unit) {
+                    try {
+                        val devices = viewModel.getAvailableDevices()
+                        if (devices.isNotEmpty()) {
+                            val device = devices.first()
+                            if (ActivityCompat.checkSelfPermission(
+                                    context,
+                                    android.Manifest.permission.USB_PERMISSION
+                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            ) {
+                                viewModel.connectOBD(device)
+                                Log.d(TAG, "Auto-connected to OBD2 adapter: ${device.deviceName}")
+                            } else {
+                                Log.d(TAG, "No OBD2 adapter, using mock data")
+                                viewModel.useMockData()
+                            }
+                        } else {
+                            Log.d(TAG, "No OBD2 adapter found, using mock data")
+                            viewModel.useMockData()
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error connecting to OBD2 adapter", e)
+                        Toast.makeText(context, "OBD2 adapter not found — mock data", Toast.LENGTH_LONG).show()
+                        viewModel.useMockData()
+                    }
+                }
+
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     ObdNumericCluster(
                         viewModel = viewModel,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
-            }
-        }
-
-        // Auto-connect to OBD2 reader on startup
-        LaunchedEffect(Unit) {
-            try {
-                val devices = viewModel.getAvailableDevices()
-                if (devices.isNotEmpty()) {
-                    val device = devices.first()
-                    if (ActivityCompat.checkSelfPermission(
-                            context,
-                            android.Manifest.permission.USB_PERMISSION
-                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                    ) {
-                        viewModel.connectOBD(device)
-                        Log.d(TAG, "Auto-connected to OBD2 adapter: ${device.deviceName}")
-                    } else {
-                        Log.d(TAG, "No OBD2 adapter, using mock data")
-                        viewModel.useMockData()
-                    }
-                } else {
-                    Log.d(TAG, "No OBD2 adapter found, using mock data")
-                    viewModel.useMockData()
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error connecting to OBD2 adapter", e)
-                Toast.makeText(context, "OBD2 adapter not found — mock data", Toast.LENGTH_LONG).show()
-                viewModel.useMockData()
             }
         }
     }
