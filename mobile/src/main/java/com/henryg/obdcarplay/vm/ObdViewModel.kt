@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.henryg.obdcarplay.obd.OBD2Manager
 import com.henryg.obdcarplay.shared.ObdData
 import com.henryg.obdcarplay.shared.ObdViewModelBase
+import com.henryg.obdcarplay.UncaughtExceptionHandler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -19,7 +20,7 @@ import java.io.IOException
  *
  * Usage:
  * ```
- * // Connect to real OBD2 reader
+ * // Connect to real OBD2 adapter
  * viewModel.connectOBD(device)
  *
  * // Or use mock data for testing
@@ -27,27 +28,29 @@ import java.io.IOException
  * ```
  */
 class ObdViewModel(
-    private val context: Context
+    context: Context
 ) : ObdViewModelBase() {
 
     companion object {
         private const val TAG = "ObdViewModel"
     }
 
-    private val obdManager = OBD2Manager(context)
+    internal val obdManager = OBD2Manager(context)
     private var mockMode = false
 
     init {
-        // Observe the manager's StateFlow and emit to UI
-        viewModelScope.launch {
+        // Observe the manager's StateFlow and emit to UI with CoroutineExceptionHandler
+        // Remove try/catch so exceptions propagate to the handler
+        viewModelScope.launch(UncaughtExceptionHandler.coroutineExceptionHandler) {
             obdManager.obdData.collect { data ->
                 isLive = obdManager.connected.value
                 updateObdData(data)
             }
         }
 
-        // Also observe connection status
-        viewModelScope.launch {
+        // Also observe connection status with CoroutineExceptionHandler
+        // Remove try/catch so exceptions propagate to the handler
+        viewModelScope.launch(UncaughtExceptionHandler.coroutineExceptionHandler) {
             obdManager.connected.collect { connected ->
                 isLive = connected
             }
@@ -98,67 +101,42 @@ class ObdViewModel(
         mockMode = true
         isLive = false
         obdManager.disconnect()
-        startMockPolling()
     }
 
     /**
-     * Disconnect from OBD2 adapter.
-     */
-    fun disconnectOBD() {
-        obdManager.disconnect()
-        if (!mockMode) {
-            startMockPolling() // Fall back to mock
-        }
-    }
-
-    /**
-     * Get available OBD2 devices.
-     */
-    fun getAvailableDevices(): List<UsbDevice> {
-        return obdManager.getAvailableDevices()
-    }
-
-    /**
-     * Check if connected to a live OBD2 adapter.
-     */
-    fun isOBDConnected(): Boolean = obdManager.connected.value
-
-    /**
-     * Manually ping the OBD2 adapter (useful for diagnostics).
-     */
-    fun pingAdapter(): Boolean = obdManager.ping()
-
-    /**
-     * Start mock sin/cos polling loop as fallback.
+     * Start mock PID polling loop.
      */
     private fun startMockPolling() {
-        viewModelScope.launch {
-            while (mockMode && !obdManager.connected.value) {
-                // Simulate 60Hz sin/cos oscillation:
-                val waterTimer = (System.nanoTime().toDouble() / 1e7) % (2 * Math.PI)
-                val oilTimer = (waterTimer * 1.5) % (2 * Math.PI)
-
-                val mockData = ObdData(
-                    waterTemp = 90 + (10 * Math.sin(waterTimer)).toInt(),
-                    oilTemp = 70 + (10 * Math.sin(oilTimer)).toInt(),
-                    afr = 1.4 + 0.2 * Math.cos(waterTimer),
-                    boostKpa = 10 + (5 * Math.sin(oilTimer)).toInt()
+        viewModelScope.launch(UncaughtExceptionHandler.coroutineExceptionHandler) {
+            while (mockMode) {
+                val timestamp = System.currentTimeMillis()
+                val waterTemp = 90 + ((timestamp % 10 - 5).toInt())
+                val oilTemp = 85 + ((timestamp % 7 - 3).toInt())
+                val afr = 14.7 + ((timestamp % 100) / 100.0 * 0.5)
+                val boostKpa = 100 + ((timestamp % 20 - 10).toInt())
+                updateObdData(
+                    ObdData(
+                        waterTemp = waterTemp,
+                        oilTemp = oilTemp,
+                        afr = afr,
+                        boostKpa = boostKpa
+                    )
                 )
-                updateObdData(mockData)
-                delay(16) // ~60Hz polling
+                delay(100)
             }
         }
     }
 
     override fun startPolling() {
-        // Real USB polling is driven by OBD2Manager
-        // This method exists for interface compliance
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        // Stop polling and clean up resources
-        mockMode = false
-        obdManager.disconnect()
+        if (!mockMode) {
+            viewModelScope.launch(UncaughtExceptionHandler.coroutineExceptionHandler) {
+                obdManager.obdData.collect { data ->
+                    isLive = obdManager.connected.value
+                    updateObdData(data)
+                }
+            }
+        } else {
+            startMockPolling()
+        }
     }
 }

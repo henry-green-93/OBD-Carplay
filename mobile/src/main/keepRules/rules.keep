@@ -1,4 +1,10 @@
 # Add project specific R8 rules here.
+
+# Keep the MainActivity entry point
+-keep class com.henryg.obdcarplay.MainActivity {
+    public *;
+}
+
 # AGP will combine all keep rule files in src/main/keepRules to pass to R8
 #
 # For more details, see

@@ -112,7 +112,7 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
         // CDC-ACM devices are most common for ELM327
         for (i in 0 until device.interfaceCount) {
             val iface = device.getInterface(i)
-            if (iface.protocol == 0xFF) { // Vendor-specific
+            if (iface.getInterfaceClass() == 0x02 && iface.getInterfaceSubclass() == 0x02) { // CDC-Communications
                 return true
             }
             if (iface.interfaceClass == 0x02) { // Communications
@@ -140,8 +140,11 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
 
         val driver = createDriver(device) ?: throw IOException("No supported driver for device")
 
-        usbSerialPort = driver.open(usbManager!!)
-            ?: throw IOException("Failed to open USB device")
+        val usbDeviceConnection = usbManager!!.openDevice(driver.device)
+        if (usbDeviceConnection == null) {
+            throw IOException("Failed to open USB device")
+        }
+        driver.getPorts().first().open(usbDeviceConnection)
 
         usbSerialPort!!.setParameters(
             BaudRate,
@@ -219,7 +222,7 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
         val port = usbSerialPort ?: throw IOException("No USB serial port")
 
         // Send command
-        port.write("${command}\r\n".toByteArray(StandardCharsets.US_ASCII))
+        port.write("${command}\r\n".toByteArray(StandardCharsets.US_ASCII), 1000)
 
         // Read response with timeout
         var response = ""
@@ -246,7 +249,7 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
      */
     private fun sendCommandQuietly(command: String) {
         try {
-            usbSerialPort?.write("${command}\r\n".toByteArray(StandardCharsets.US_ASCII))
+            usbSerialPort?.write("${command}\r\n".toByteArray(StandardCharsets.US_ASCII), 1000)
         } catch (e: IOException) {
             Log.w(TAG, "Quiet command failed: $command", e)
         }
@@ -262,7 +265,7 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
      */
     fun disconnect() {
         try {
-            inputManager?.stopListening()
+            inputManager?.stop()
         } catch (e: Exception) {
             Log.w(TAG, "Error stopping listener", e)
         }

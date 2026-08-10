@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.henryg.obdcarplay.shared.ObdData
 import kotlinx.coroutines.withContext
 import java.io.IOException
 
@@ -51,7 +52,7 @@ class OBD2Manager(private val context: Context) {
     private var _currentWaterTemp: Int = 0
         private set
     private var _currentOilTemp: Int = 0
-        private field
+        private set
     private var _currentAfr: Double = 0.0
         private set
     private var _currentBoostKpa: Int = 0

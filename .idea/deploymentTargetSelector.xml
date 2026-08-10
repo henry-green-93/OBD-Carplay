@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="mobile">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-08-06T18:44:05.249862044Z">
+        <DropdownSelection timestamp="2026-08-10T14:34:11.761072987Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="Default" identifier="serial=192.168.0.40:36229;connection=67512c33" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=/home/henryg/.android/avd/Pixel_10.avd" />
             </handle>
           </Target>
         </DropdownSelection>
@@ -15,10 +15,21 @@
       </SelectionState>
       <SelectionState runConfigName="automotive">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-08-04T19:03:22.039348338Z">
+        <DropdownSelection timestamp="2026-08-10T00:54:56.586450775Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=21041FDEE000TU" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=57290DLCQ002Y9" />
+            </handle>
+          </Target>
+        </DropdownSelection>
+        <DialogSelection />
+      </SelectionState>
+      <SelectionState runConfigName="androidTest">
+        <option name="selectionMode" value="DROPDOWN" />
+        <DropdownSelection timestamp="2026-08-06T18:44:05.249862044Z">
+          <Target type="DEFAULT_BOOT">
+            <handle>
+              <DeviceId pluginId="Default" identifier="serial=192.168.0.40:36229;connection=67512c33" />
             </handle>
           </Target>
         </DropdownSelection>

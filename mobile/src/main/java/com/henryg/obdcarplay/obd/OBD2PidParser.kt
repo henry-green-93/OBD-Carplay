@@ -20,6 +20,7 @@ class OBD2PidParser {
 
     companion object {
         private const val TAG = "OBD2PidParser"
+        private const val ELM327_PROMPT = ">"
     }
 
     /**
@@ -182,9 +183,5 @@ class OBD2PidParser {
         }
 
         return values
-    }
-
-    companion object {
-        private const val ELM327_PROMPT = ">"
     }
 }

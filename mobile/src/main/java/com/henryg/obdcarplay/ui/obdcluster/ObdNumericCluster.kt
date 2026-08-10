@@ -25,7 +25,7 @@ import com.henryg.obdcarplay.vm.ObdViewModel
 @Composable
 fun ObdNumericCluster(viewModel: ObdViewModel, modifier: Modifier = Modifier) {
     val data by viewModel.obdState.collectAsState()
-    val isConnected = viewModel.isOBDConnected()
+    val isConnected = viewModel.isLive
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -37,7 +37,7 @@ fun ObdNumericCluster(viewModel: ObdViewModel, modifier: Modifier = Modifier) {
                     IconButton(
                         onClick = {
                             if (isConnected) {
-                                viewModel.disconnectOBD()
+                                viewModel.obdManager.disconnect()
                             } else {
                                 viewModel.connectFirstAvailable()
                             }
