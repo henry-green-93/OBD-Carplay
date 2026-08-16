@@ -54,8 +54,7 @@ The project uses [Version Catalogs](https://docs.gradle.org/current/userguide/pl
 - [x] **Automotive UI**: `ObdCarScreen` using Car App `MessageTemplate` with `CarText`
 - [x] **Shared Layer**: `ObdData` data class + `ObdViewModelBase` polling lifecycle
 - [x] **OBD2 USB Reader**: `OBD2Reader` + `OBD2PidParser` + `OBD2Manager` for real ECU data
-- [x] **Connection UI**: Connection status banner, connect/disconnect buttons, mock toggle
-
+- [x] **Connection UI**: Connection status banner, connect/disconnect buttons, mock toggle- [ ] **Splash Screen**: Custom logo and full splash screen to be implemented.
 ## 📦 Component Details
 
 ### Mobile (`:mobile`)

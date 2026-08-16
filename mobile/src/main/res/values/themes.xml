@@ -2,4 +2,10 @@
 <resources>
 
     <style name="Theme.OBDCarPlay" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Splash screen theme: full-screen logo with no action bar -->
+    <style name="Theme.OBDCarPlay.Splash" parent="Theme.OBDCarPlay">
+        <item name="android:windowBackground">@mipmap/ic_launcher</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
 </resources>

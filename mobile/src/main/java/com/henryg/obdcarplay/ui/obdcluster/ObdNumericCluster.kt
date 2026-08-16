@@ -21,94 +21,80 @@ import com.henryg.obdcarplay.vm.ObdViewModel
  * Shows real-time OBD2 data from a connected ELM327 adapter or mock data.
  * Includes connection status indicator and connect/disconnect buttons.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ObdNumericCluster(viewModel: ObdViewModel, modifier: Modifier = Modifier) {
     val data by viewModel.obdState.collectAsState()
     val isConnected = viewModel.isLive
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = { Text("OBD2 Live Monitor") },
-                actions = {
-                    // Connection status indicator
-                    IconButton(
-                        onClick = {
-                            if (isConnected) {
-                                viewModel.obdManager.disconnect()
-                            } else {
-                                viewModel.connectFirstAvailable()
-                            }
-                        }
-                    ) {
-                        if (isConnected) {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = "Connected",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Disconnected",
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Connection status banner
+        ConnectionBanner(isConnected)
 
-                    // Switch to mock data
-                    IconButton(onClick = { viewModel.useMockData() }) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Switch to mock data"
-                        )
-                    }
-                }
+        // Main data cluster
+        Text(
+            text = "OBD2 Numeric Cluster",
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        // Row: Water Temp + Oil Temp side by side
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            NumericCard(
+                label = "Water Temp",
+                value = "${data.waterTemp}°C",
+                modifier = Modifier.weight(1f)
+            )
+            NumericCard(
+                label = "Oil Temp",
+                value = "${data.oilTemp}°C",
+                modifier = Modifier.weight(1f)
             )
         }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+
+        // Full-width card for AFR + Boost
+        NumericCard(
+            label = "AFR + Boost",
+            value = data.afrBoostDisplay,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // Spacer for bottom of screen
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Action buttons row at bottom
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            // Connection status banner
-            ConnectionBanner(isConnected)
-
-            // Main data cluster
-            Text(
-                text = "OBD2 Numeric Cluster",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            // Row: Water Temp + Oil Temp side by side
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxWidth()
+            Button(
+                onClick = { viewModel.connectFirstAvailable() },
+                modifier = Modifier.weight(1f)
             ) {
-                NumericCard(
-                    label = "Water Temp",
-                    value = "${data.waterTemp}°C",
-                    modifier = Modifier.weight(1f)
-                )
-                NumericCard(
-                    label = "Oil Temp",
-                    value = "${data.oilTemp}°C",
-                    modifier = Modifier.weight(1f)
-                )
+                Text("Connect OBD2")
             }
-
-            // Full-width card for AFR + Boost
-            NumericCard(
-                label = "AFR + Boost",
-                value = data.afrBoostDisplay,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Button(
+                onClick = { viewModel.useMockData() },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Use Mock Data")
+            }
+            if (isConnected) {
+                Button(
+                    onClick = { viewModel.obdManager.disconnect() },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Disconnect")
+                }
+            }
         }
     }
 }

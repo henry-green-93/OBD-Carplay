@@ -77,6 +77,26 @@ class ObdViewModel(
     }
 
     /**
+     * Connect to a real OBD2 adapter via USB with a timeout.
+     * Falls back to mock data if the connection times out.
+     */
+    fun connectOBDWithTimeout(device: UsbDevice, timeoutMillis: Long) {
+        mockMode = false
+        isLive = true
+        viewModelScope.launch {
+            try {
+                obdManager.connect(device, timeoutMillis)
+                Log.d(TAG, "Connected to OBD2 adapter with timeout")
+            } catch (e: IOException) {
+                Log.e(TAG, "Connection timed out or failed: ${e.message}")
+                isLive = false
+                // Fall back to mock on connection failure or timeout
+                startMockPolling()
+            }
+        }
+    }
+
+    /**
      * Connect to the first available OBD2 adapter.
      */
     fun connectFirstAvailable() {
@@ -101,6 +121,8 @@ class ObdViewModel(
         mockMode = true
         isLive = false
         obdManager.disconnect()
+        startMockPolling()
+        Log.d(TAG, "Mock data polling started")
     }
 
     /**

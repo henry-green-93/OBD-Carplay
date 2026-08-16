@@ -83,34 +83,40 @@ class OBD2Manager(private val context: Context) {
     private val cycleSize = PID_COMMANDS.size
 
     /**
-     * Connect to an OBD2 adapter.
+     * Connect to an OBD2 adapter with timeout.
      *
      * @param device The USB device to connect to
-     * @throws IOException if connection fails
+     * @param timeoutMillis Connection timeout in milliseconds (default: 5000ms)
+     * @throws IOException if connection fails or times out
      */
     @Throws(IOException::class)
-    suspend fun connect(device: UsbDevice) = withContext(Dispatchers.IO) {
+    suspend fun connect(device: UsbDevice, timeoutMillis: Long = 5000) = withContext(Dispatchers.IO) {
         try {
-            reader.connect(device)
+            reader.connect(device, timeoutMillis)
             _connected.value = true
             Log.d(TAG, "Connected to OBD2 adapter: ${device.deviceName}")
             startPolling()
         } catch (e: IOException) {
             _connected.value = false
+            Log.e(TAG, "Failed to connect to OBD2 adapter: ${e.message}")
             throw IOException("Failed to connect to OBD2 adapter: ${e.message}", e)
         }
     }
 
     /**
-     * Connect to the first available OBD2 adapter.
+     * Connect to the first available OBD2 adapter with timeout.
+     *
+     * @param timeoutMillis Connection timeout in milliseconds (default: 5000ms)
+     * @throws IOException if connection fails or times out
      */
     @Throws(IOException::class)
-    suspend fun connectFirstAvailable() = withContext(Dispatchers.IO) {
+    suspend fun connectFirstAvailable(timeoutMillis: Long = 5000) = withContext(Dispatchers.IO) {
         val available = reader.getAvailableDevices()
         if (available.isEmpty()) {
+            Log.d(TAG, "No OBD2 adapters found")
             throw IOException("No OBD2 adapters found")
         }
-        connect(available.first())
+        connect(available.first(), timeoutMillis)
     }
 
     /**

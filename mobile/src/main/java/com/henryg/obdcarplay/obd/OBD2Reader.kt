@@ -12,8 +12,10 @@ import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.util.SerialInputOutputManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import java.io.IOException
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.TimeUnit
 
 /**
  * OBD2 Reader abstraction layer using USB-Serial for Android.
@@ -123,13 +125,15 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
     }
 
     /**
-     * Connect to an OBD2 adapter via USB.
+     * Connect to an OBD2 adapter via USB (suspend function with timeout).
      *
      * @param device The USB device to connect to
-     * @throws IOException if connection fails
+     * @param timeoutMillis Connection timeout in milliseconds (default: 5000ms)
+     * @throws IOException if connection fails or times out
      */
     @Throws(IOException::class)
-    fun connect(device: UsbDevice) {
+    suspend fun connect(device: UsbDevice, timeoutMillis: Long = 5000) {
+        Log.d(TAG, "Connecting to ${device.deviceName} (timeout: ${timeoutMillis}ms)...")
         usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
         usbDevice = device
 
@@ -153,23 +157,32 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
             UsbSerialPort.PARITY_NONE
         )
 
-        // Initialize ELM327
-        initializeAdapter()
+        // Initialize ELM327 with overall timeout
+        try {
+            withTimeout(timeoutMillis) {
+                initializeAdapter()
+            }
+        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            Log.e(TAG, "Connection timed out after ${timeoutMillis}ms")
+            throw IOException("Connection timed out after ${timeoutMillis}ms", e)
+        }
 
         isConnected = true
         Log.d(TAG, "Connected to ${device.deviceName}")
     }
 
     /**
-     * Connect to the first available OBD2 adapter.
+     * Connect to the first available OBD2 adapter (suspend function).
      */
     @Throws(IOException::class)
-    fun connectFirstAvailable() {
+    suspend fun connectFirstAvailable(timeoutMillis: Long = 5000) {
         val devices = getAvailableDevices()
         if (devices.isEmpty()) {
+            Log.d(TAG, "No OBD2 adapters found")
             throw IOException("No OBD2 adapters found")
         }
-        connect(devices.first())
+        Log.d(TAG, "Connecting to first available device: ${devices.first().deviceName}")
+        connect(devices.first(), timeoutMillis)
     }
 
     /**
@@ -195,15 +208,23 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
      * Initialize the ELM327 adapter with standard commands.
      */
     private fun initializeAdapter() {
+        Log.d(TAG, "Initializing ELM327 adapter...")
+
         // Reset ELM327
+        Log.d(TAG, "Sending reset command (AT Z)...")
         sendCommandQuietly(CMD_RESET)
 
         // Turn off echo and linefeed
+        Log.d(TAG, "Sending echo off command (ATE0)...")
         sendCommandQuietly(CMD_ECHO_OFF)
+        Log.d(TAG, "Sending linefeed off command (ATL0)...")
         sendCommandQuietly(CMD_LINEFEED_OFF)
 
         // Auto-detect protocol
+        Log.d(TAG, "Sending auto-detect protocol command (AT TP 0)...")
         sendCommandQuietly(CMD_PROTOCOL_AUTO)
+
+        Log.d(TAG, "ELM327 initialization complete")
     }
 
     /**

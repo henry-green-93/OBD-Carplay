@@ -1,40 +1,40 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml:1:1-19:12
-INJECTED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml:1:1-19:12
+ADDED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml:1:1-19:12
+INJECTED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml:1:1-19:12
 	package
-		INJECTED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml
+		INJECTED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml
 	xmlns:android
-		ADDED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml:1:11-69
+		ADDED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml:1:11-69
 application
-ADDED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml:3:5-18:19
+ADDED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml:3:5-18:19
 meta-data#androidx.car.app.minCarApiLevel
-ADDED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml:5:9-7:33
+ADDED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml:5:9-7:33
 	android:value
-		ADDED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml:7:13-30
+		ADDED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml:7:13-30
 	android:name
-		ADDED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml:6:13-59
+		ADDED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml:6:13-59
 service#com.henryg.obdcarplay.shared.MyCarAppService
-ADDED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml:9:9-17:19
+ADDED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml:9:9-17:19
 	android:exported
-		ADDED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml:11:13-36
+		ADDED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml:11:13-36
 	android:name
-		ADDED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml:10:13-72
+		ADDED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml:10:13-72
 intent-filter#action:name:androidx.car.app.CarAppService+category:name:androidx.car.app.category.POI
-ADDED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml:12:13-16:29
+ADDED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml:12:13-16:29
 action#androidx.car.app.CarAppService
-ADDED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml:13:17-73
+ADDED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml:13:17-73
 	android:name
-		ADDED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml:13:25-70
+		ADDED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml:13:25-70
 category#androidx.car.app.category.POI
-ADDED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml:15:17-74
+ADDED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml:15:17-74
 	android:name
-		ADDED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml:15:27-71
+		ADDED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml:15:27-71
 uses-sdk
-INJECTED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml reason: use-sdk injection requested
-INJECTED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml
-INJECTED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml
+INJECTED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml
+INJECTED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml
 	android:targetSdkVersion
-		INJECTED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml
+		INJECTED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml
 	android:minSdkVersion
-		INJECTED from /home/henryg/AndroidStudioProjects/OBDCarPlay/shared/src/main/AndroidManifest.xml
+		INJECTED from /home/hgreen/StudioProjects/OBD-Carplay/shared/src/main/AndroidManifest.xml
