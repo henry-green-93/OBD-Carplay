@@ -8,7 +8,7 @@ import android.util.Log
  * Handles the standard ELM327 response format:
  * - "41 XX YY" - Mode 01, PID 0xXX, data YY
  * - "7E8 01 XX YY" - Mode 01 response from EC
- * - "NO DATA", "BUS BUSY", etc.
+ * - "NO DATA", "BUSY", etc.
  *
  * Decodes:
  * - Engine RPM: ((256*A)+B)/4
