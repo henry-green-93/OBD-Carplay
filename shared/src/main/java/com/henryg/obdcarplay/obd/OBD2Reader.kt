@@ -91,6 +91,9 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
     // Response buffer for incoming OBD2 data
     private var lastResponse: String? = null
 
+    /** Name of the currently connected USB device, or null if disconnected. */
+    val deviceName: String? get() = usbDevice?.deviceName
+
     /**
      * Get available USB devices that could be OBD2 adapters.
      */

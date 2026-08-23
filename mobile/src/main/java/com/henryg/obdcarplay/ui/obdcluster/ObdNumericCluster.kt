@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.henryg.obdcarplay.shared.OBD2ConnectionStatus
+import com.henryg.obdcarplay.shared.label
 import com.henryg.obdcarplay.shared.ObdData
 import com.henryg.obdcarplay.vm.ObdViewModel
 
@@ -25,6 +27,7 @@ import com.henryg.obdcarplay.vm.ObdViewModel
 fun ObdNumericCluster(viewModel: ObdViewModel, modifier: Modifier = Modifier) {
     val data by viewModel.obdState.collectAsState()
     val isConnected = viewModel.isLive
+    val connectionStatus by viewModel.connectionStatus.collectAsState()
 
     Column(
         modifier = modifier
@@ -33,7 +36,7 @@ fun ObdNumericCluster(viewModel: ObdViewModel, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Connection status banner
-        ConnectionBanner(isConnected)
+        ConnectionBanner(isConnected, connectionStatus)
 
         // Main data cluster
         Text(
@@ -103,21 +106,47 @@ fun ObdNumericCluster(viewModel: ObdViewModel, modifier: Modifier = Modifier) {
  * Banner showing connection status.
  */
 @Composable
-private fun ConnectionBanner(isConnected: Boolean) {
+private fun ConnectionBanner(isConnected: Boolean, status: OBD2ConnectionStatus) {
+    var icon = "🔴"
+    var message = "Disconnected"
+    var containerColor = MaterialTheme.colorScheme.errorContainer
+    var contentColor = MaterialTheme.colorScheme.onErrorContainer
+
+    when (status) {
+        is OBD2ConnectionStatus.Disconnected -> {
+            icon = "🔴"
+            message = "Disconnected — tap Connect OBD2"
+            containerColor = MaterialTheme.colorScheme.errorContainer
+            contentColor = MaterialTheme.colorScheme.onErrorContainer
+        }
+        is OBD2ConnectionStatus.UsbConnected -> {
+            icon = "🟡"
+            message = "OBD2 Reader Connected — waiting for ECU"
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        }
+        is OBD2ConnectionStatus.EcUConnected -> {
+            icon = "🟢"
+            message = "ECU Connected"
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        }
+        is OBD2ConnectionStatus.Error -> {
+            icon = "⚠️"
+            message = "Error: ${status.message}"
+            containerColor = MaterialTheme.colorScheme.errorContainer
+            contentColor = MaterialTheme.colorScheme.onErrorContainer
+        }
+    }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = if (isConnected)
-            MaterialTheme.colorScheme.primaryContainer
-        else
-            MaterialTheme.colorScheme.errorContainer
+        color = containerColor
     ) {
         Text(
-            text = if (isConnected) "🟢 Connected to OBD2 adapter" else "🔴 Not connected — using mock data",
+            text = "$icon $message",
             style = MaterialTheme.typography.labelLarge,
-            color = if (isConnected)
-                MaterialTheme.colorScheme.onPrimaryContainer
-            else
-                MaterialTheme.colorScheme.onErrorContainer,
+            color = contentColor,
             modifier = Modifier.padding(8.dp)
         )
     }

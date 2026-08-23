@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import com.henryg.obdcarplay.shared.ObdData
+import com.henryg.obdcarplay.shared.OBD2ConnectionStatus
 import kotlinx.coroutines.withContext
 import java.io.IOException
 
@@ -65,16 +66,21 @@ class OBD2Manager(private val context: Context) {
     val obdData: StateFlow<ObdData> = _obdData.asStateFlow()
 
     /**
-     * Connection status.
+     * Connection status (USB adapter + ECU).
      */
-    private val _connected = MutableStateFlow(false)
-    val connected: StateFlow<Boolean> = _connected.asStateFlow()
+    private val _connectionStatus = MutableStateFlow<OBD2ConnectionStatus>(OBD2ConnectionStatus.Disconnected)
+    val connectionStatus: StateFlow<OBD2ConnectionStatus> = _connectionStatus.asStateFlow()
 
     /**
      * Whether the reader is actively polling.
      */
     var isPolling: Boolean = false
         private set
+
+    /**
+     * Number of successful PID responses received. Once > 0, ECU is considered connected.
+     */
+    private var successfulPidCount: Int = 0
 
     /**
      * Polling cycle (number of PIDs per cycle).
@@ -93,11 +99,11 @@ class OBD2Manager(private val context: Context) {
     suspend fun connect(device: UsbDevice, timeoutMillis: Long = 5000) = withContext(Dispatchers.IO) {
         try {
             reader.connect(device, timeoutMillis)
-            _connected.value = true
+            _connectionStatus.value = OBD2ConnectionStatus.UsbConnected(device.deviceName ?: "Unknown")
             Log.d(TAG, "Connected to OBD2 adapter: ${device.deviceName}")
             startPolling()
         } catch (e: IOException) {
-            _connected.value = false
+            _connectionStatus.value = OBD2ConnectionStatus.Error(e.message ?: "Connection failed")
             Log.e(TAG, "Failed to connect to OBD2 adapter: ${e.message}")
             throw IOException("Failed to connect to OBD2 adapter: ${e.message}", e)
         }
@@ -114,6 +120,8 @@ class OBD2Manager(private val context: Context) {
         val available = reader.getAvailableDevices()
         if (available.isEmpty()) {
             Log.d(TAG, "No OBD2 adapters found")
+            _connectionStatus.value = OBD2ConnectionStatus.Disconnected
+            disconnect()
             throw IOException("No OBD2 adapters found")
         }
         connect(available.first(), timeoutMillis)
@@ -151,6 +159,12 @@ class OBD2Manager(private val context: Context) {
                     // Update the appropriate field based on label
                     parsed?.let {
                         updateMetric(label, it)
+                        successfulPidCount++
+                        // Once we have at least one successful PID, mark ECU as connected
+                        if (successfulPidCount == 1) {
+                            val deviceName = reader.deviceName ?: "Unknown"
+                            _connectionStatus.value = OBD2ConnectionStatus.EcUConnected(deviceName)
+                        }
                     }
 
                     cycleCount++
@@ -167,6 +181,7 @@ class OBD2Manager(private val context: Context) {
 
             } catch (e: IOException) {
                 Log.e(TAG, "Polling error", e)
+                _connectionStatus.value = OBD2ConnectionStatus.Error(e.message ?: "Polling error")
                 // Reconnect on error
                 Thread.sleep(500)
             }
@@ -242,7 +257,7 @@ class OBD2Manager(private val context: Context) {
     fun disconnect() {
         isPolling = false
         reader.disconnect()
-        _connected.value = false
+        _connectionStatus.value = OBD2ConnectionStatus.Disconnected
         _obdData.value = createEmptyObdData()
         Log.d(TAG, "Disconnected from OBD2 adapter")
     }

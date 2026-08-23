@@ -5,6 +5,7 @@ import android.hardware.usb.UsbDevice
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.henryg.obdcarplay.obd.OBD2Manager
+import com.henryg.obdcarplay.shared.OBD2ConnectionStatus
 import com.henryg.obdcarplay.shared.ObdData
 import com.henryg.obdcarplay.shared.ObdViewModelBase
 import com.henryg.obdcarplay.UncaughtExceptionHandler
@@ -43,7 +44,6 @@ class ObdViewModel(
         // Remove try/catch so exceptions propagate to the handler
         viewModelScope.launch(UncaughtExceptionHandler.coroutineExceptionHandler) {
             obdManager.obdData.collect { data ->
-                isLive = obdManager.connected.value
                 updateObdData(data)
             }
         }
@@ -51,8 +51,9 @@ class ObdViewModel(
         // Also observe connection status with CoroutineExceptionHandler
         // Remove try/catch so exceptions propagate to the handler
         viewModelScope.launch(UncaughtExceptionHandler.coroutineExceptionHandler) {
-            obdManager.connected.collect { connected ->
-                isLive = connected
+            obdManager.connectionStatus.collect { status ->
+                isLive = status is OBD2ConnectionStatus.EcUConnected || status is OBD2ConnectionStatus.UsbConnected
+                updateObdData(ObdData.live(status))
             }
         }
     }
@@ -152,9 +153,8 @@ class ObdViewModel(
     override fun startPolling() {
         if (!mockMode) {
             viewModelScope.launch(UncaughtExceptionHandler.coroutineExceptionHandler) {
-                obdManager.obdData.collect { data ->
-                    isLive = obdManager.connected.value
-                    updateObdData(data)
+                obdManager.connectionStatus.collect { status ->
+                    isLive = status is OBD2ConnectionStatus.EcUConnected || status is OBD2ConnectionStatus.UsbConnected
                 }
             }
         } else {

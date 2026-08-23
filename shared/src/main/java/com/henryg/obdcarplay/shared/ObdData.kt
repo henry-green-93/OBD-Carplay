@@ -8,6 +8,7 @@ package com.henryg.obdcarplay.shared
  * - oilTemp: engine oil temperature in Celsius
  * - afr: air/fuel ratio (dimensionless; stoichiometric ≈ 14.7)
  * - boostKpa: absolute manifold pressure in kPa (negative = vacuum)
+ * - connectionStatus: current OBD2 connection state
  *
  * This class is shared across all platform modules (mobile, automotive, etc.).
  */
@@ -15,7 +16,8 @@ data class ObdData(
     val waterTemp: Int = 0,
     val oilTemp: Int = 0,
     val afr: Double = 0.0,
-    val boostKpa: Int = 0
+    val boostKpa: Int = 0,
+    val connectionStatus: OBD2ConnectionStatus = OBD2ConnectionStatus.Disconnected
 ) {
     /** Human-readable combined AFR + Boost string for display. */
     val afrBoostDisplay: String
@@ -24,5 +26,9 @@ data class ObdData(
     companion object {
         /** Zero-filled default instance used when no connection exists. */
         val Empty = ObdData()
+
+        /** Zero-filled instance with ECU-connected status for when data is live. */
+        fun live(connectionStatus: OBD2ConnectionStatus = OBD2ConnectionStatus.Disconnected): ObdData =
+            ObdData(connectionStatus = connectionStatus)
     }
 }

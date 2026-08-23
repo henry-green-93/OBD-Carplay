@@ -3,45 +3,59 @@ package com.henryg.obdcarplay.shared
 import android.content.Intent
 import androidx.car.app.Screen
 import androidx.car.app.Session
+import com.henryg.obdcarplay.obd.OBD2Manager
 import com.henryg.obdcarplay.ui.obdcluster.ObdCarScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /**
  * Automotive Car App Session.
  *
- * Creates an automotive-specific ObdViewModelBase with mock polling
- * (since Android Automotive doesn't have direct USB access like mobile).
- * In production, this would connect to a head unit service or CAN bus.
+ * Creates an automotive-specific ObdViewModelBase with real OBD2Manager
+ * that connects to a USB OBD2 adapter and polls PIDs from the ECU.
  */
 class MyCarAppSession : Session() {
     override fun onCreateScreen(intent: Intent): Screen {
+        val oemContext = carContext
+        val manager = OBD2Manager(oemContext)
+
         val viewModel = object : ObdViewModelBase() {
             // Scope for the polling coroutine (bound to session lifecycle)
             private val scope = CoroutineScope(Dispatchers.Default + Job())
 
             override fun startPolling() {
-                // Start mock polling loop for automotive
+                // Collect OBD data and update ViewModel
                 scope.launch {
-                    while (true) {
-                        val timer = (System.nanoTime().toDouble() / 1e7) % (2 * Math.PI)
-                        val oilTimer = (timer * 1.5) % (2 * Math.PI)
+                    manager.obdData.collectLatest { data ->
+                        updateObdData(data)
+                    }
+                }
 
-                        updateObdData(ObdData(
-                            waterTemp = 90 + (10 * Math.sin(timer)).toInt(),
-                            oilTemp = 70 + (10 * Math.sin(oilTimer)).toInt(),
-                            afr = 1.4 + 0.2 * Math.cos(timer),
-                            boostKpa = 10 + (5 * Math.sin(oilTimer)).toInt()
-                        ))
-                        delay(16)
+                // Collect connection status and update ViewModel
+                scope.launch {
+                    manager.connectionStatus.collectLatest { status ->
+                        updateConnectionStatus(status)
+                        // Update obdState with connection status
+                        updateObdData(ObdData.live(status))
+                    }
+                }
+
+                // Attempt to connect to first available OBD2 adapter
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        manager.connectFirstAvailable(timeoutMillis = 5000L)
+                    } catch (_: Exception) {
+                        // Connection failed — status already updated by manager
                     }
                 }
             }
         }
         viewModel.startPolling()
-        return ObdCarScreen(carContext, viewModel)
+        return ObdCarScreen(oemContext, viewModel)
     }
 }
