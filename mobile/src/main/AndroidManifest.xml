@@ -61,6 +61,14 @@
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.OBDCarPlay" />
+
+        <receiver
+            android:name=".OBDUsbPermissionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

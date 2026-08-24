@@ -1,12 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- ELM327 OBD2 adapters - common USB vendor/product IDs -->
-    <!-- FTDI-based adapters (most ELM327 clones) -->
-    <usb-device vendor-id="1027" product-id="24577" /> <!-- FTDI FT232R -->
-    <usb-device vendor-id="1027" product-id="24592" /> <!-- FTDI FT232H -->
-    <usb-device vendor-id="1027" product-id="24593" /> <!-- FTDI FT231XS -->
-    <usb-device vendor-id="1027" product-id="24597" /> <!-- OBDLINK SX -->
-    <!-- CDC-ACM adapters (OBDLink, etc.) -->
-    <usb-device class="2" subclass="0" protocol="0" /> <!-- CDC Control -->
-    <usb-device class="255" subclass="6" protocol="1" /> <!-- Vendor Specific -->
+    <!--
+        USB device filter for OBD2 adapters.
+        Supports all known OBDLink, ELM327, and common USB-to-UART bridge chips.
+
+        VID/PID values are in DECIMAL (as required by Android's device_filter.xml).
+        Hex values are shown in comments for reference.
+    -->
+
+    <!-- ============================================ -->
+    <!-- SILICON LABS CP2102/CP2102N (OBDLink SX, CX3, most common) -->
+    <!-- ============================================ -->
+    <!-- Silicon Labs generic VID (0x10C4 = 4292 decimal) -->
+    <!-- CP2102 / CP2102N default PID (0xEA60 = 60000 decimal) -->
+    <usb-device vendor-id="4292" product-id="60000" />
+    <!-- CP2101 PID (0xEA70 = 60016 decimal) -->
+    <usb-device vendor-id="4292" product-id="60016" />
+    <!-- CP2102N on OBDLink SX (same PID as CP2102) -->
+    <!-- CP2104 PID (0xEA71 = 60017 decimal) -->
+    <usb-device vendor-id="4292" product-id="60017" />
+    <!-- CP2105/CP2108 multi-port PIDs -->
+    <usb-device vendor-id="4292" product-id="60019" />
+    <usb-device vendor-id="4292" product-id="60021" />
+
+    <!-- ============================================ -->
+    <!-- FTDI FT232R / FT232H / FT231XS (OBDLink BX, MX, LX, CX2) -->
+    <!-- ============================================ -->
+    <!-- FTDI VID (0x0403 = 1027 decimal) -->
+    <!-- FT232R PID (0x6001 = 24577 decimal) - OBDLink BX, MX, LX -->
+    <usb-device vendor-id="1027" product-id="24577" />
+    <!-- FT232H PID (0x6018 = 24592 decimal) -->
+    <usb-device vendor-id="1027" product-id="24592" />
+    <!-- FT231XS PID (0x6019 = 24593 decimal) -->
+    <usb-device vendor-id="1027" product-id="24593" />
+    <!-- OBDLink SX (older FTDI variant) PID (0x6015 = 24597 decimal) -->
+    <usb-device vendor-id="1027" product-id="24597" />
+
+    <!-- ============================================ -->
+    <!-- VECTRONIX / OTHER VENDOR-SPECIFIC (0xFF class) -->
+    <!-- ============================================ -->
+    <!-- Generic Vendor Specific class (0xFF) - covers many ELM327 clones -->
+    <usb-device class="255" subclass="6" protocol="1" />
+    <!-- CDC-ACM class (0x02, subclass 0x02) - standard USB serial -->
+    <usb-device class="2" subclass="0" protocol="0" />
 </resources>

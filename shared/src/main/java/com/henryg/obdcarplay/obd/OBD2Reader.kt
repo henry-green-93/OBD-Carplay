@@ -5,12 +5,16 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.util.Log
 import com.hoho.android.usbserial.driver.CdcAcmSerialDriver
+import com.hoho.android.usbserial.driver.Ch34xSerialDriver
+import com.hoho.android.usbserial.driver.Cp21xxSerialDriver
 import com.hoho.android.usbserial.driver.FtdiSerialDriver
+import com.hoho.android.usbserial.driver.ProlificSerialDriver
 import com.hoho.android.usbserial.driver.ProbeTable
 import com.hoho.android.usbserial.driver.UsbSerialDriver
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.util.SerialInputOutputManager
 import kotlinx.coroutines.Dispatchers
+import java.util.concurrent.CompletableFuture
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import java.io.IOException
@@ -88,11 +92,22 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
     private var isConnected = false
     private var isReading = false
 
+    // Used to wait for USB permission callback from OBDUsbPermissionReceiver
+    private var usbPermissionFuture: CompletableFuture<UsbDevice?>? = null
+
     // Response buffer for incoming OBD2 data
     private var lastResponse: String? = null
 
     /** Name of the currently connected USB device, or null if disconnected. */
     val deviceName: String? get() = usbDevice?.deviceName
+
+    /**
+     * Set the CompletableFuture that will be completed when USB permission is granted/denied.
+     * Call this before connect() when no permission exists for the device.
+     */
+    fun setUsbPermissionFuture(future: CompletableFuture<UsbDevice?>?) {
+        this.usbPermissionFuture = future
+    }
 
     /**
      * Get available USB devices that could be OBD2 adapters.
@@ -114,13 +129,18 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
      * Check if a USB device is likely an OBD2 adapter.
      */
     private fun isLikelyOBD2Device(device: UsbDevice): Boolean {
-        // CDC-ACM devices are most common for ELM327
+        // OBD2 adapters use CDC-ACM or Vendor Specific interfaces
         for (i in 0 until device.interfaceCount) {
             val iface = device.getInterface(i)
-            if (iface.getInterfaceClass() == 0x02 && iface.getInterfaceSubclass() == 0x02) { // CDC-Communications
+            // CDC-ACM (class 0x02) - standard USB serial
+            if (iface.getInterfaceClass() == 0x02 && iface.getInterfaceSubclass() == 0x02) {
                 return true
             }
-            if (iface.interfaceClass == 0x02) { // Communications
+            if (iface.interfaceClass == 0x02) {
+                return true
+            }
+            // Vendor Specific (class 0xFF) - CP2102, CH34x, PL2303, most ELM327 clones
+            if (iface.interfaceClass == 0xFF) {
                 return true
             }
         }
@@ -140,9 +160,24 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
         usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
         usbDevice = device
 
-        // Check USB permission
+        // Check USB permission - request if not granted
         if (!usbManager?.hasPermission(device)!!) {
-            throw IOException("No USB permission for device ${device.deviceName}")
+            Log.d(TAG, "No USB permission, requesting...")
+            val future = usbPermissionFuture
+            if (future != null) {
+                usbManager!!.requestPermission(device, null)
+                try {
+                    // Wait for the broadcast receiver to complete the future
+                    val resultDevice = future.get(10_000, java.util.concurrent.TimeUnit.MILLISECONDS)
+                    if (resultDevice == null || !usbManager!!.hasPermission(resultDevice)) {
+                        throw IOException("USB permission denied for device ${device.deviceName}")
+                    }
+                } catch (e: java.util.concurrent.TimeoutException) {
+                    throw IOException("USB permission timeout for device ${device.deviceName}")
+                }
+            } else {
+                throw IOException("No USB permission for device ${device.deviceName}")
+            }
         }
 
         val driver = createDriver(device) ?: throw IOException("No supported driver for device")
@@ -195,15 +230,39 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
         // Try CDC-ACM driver first (most common for ELM327)
         val cdcDriver = CdcAcmSerialDriver(device)
         if (cdcDriver.getPorts().isNotEmpty()) {
+            Log.d(TAG, "Detected CDC-ACM driver")
             return cdcDriver
         }
 
-        // Try FTDI driver
+        // Try FTDI driver (FT232R, FT232H, FT231XS)
         val ftdiDriver = FtdiSerialDriver(device)
         if (ftdiDriver.getPorts().isNotEmpty()) {
+            Log.d(TAG, "Detected FTDI driver")
             return ftdiDriver
         }
 
+        // Try Silicon Labs CP210x driver (CP2102, CP2102N - OBDLink SX/CX3)
+        val cp21xxDriver = Cp21xxSerialDriver(device)
+        if (cp21xxDriver.getPorts().isNotEmpty()) {
+            Log.d(TAG, "Detected CP21xx driver")
+            return cp21xxDriver
+        }
+
+        // Try CH34x driver (CH340, CH341 - common ELM327 clones)
+        val ch34xDriver = Ch34xSerialDriver(device)
+        if (ch34xDriver.getPorts().isNotEmpty()) {
+            Log.d(TAG, "Detected CH34x driver")
+            return ch34xDriver
+        }
+
+        // Try Prolific PL2303 driver
+        val prolificDriver = ProlificSerialDriver(device)
+        if (prolificDriver.getPorts().isNotEmpty()) {
+            Log.d(TAG, "Detected Prolific driver")
+            return prolificDriver
+        }
+
+        Log.d(TAG, "No supported driver found for device")
         return null
     }
 

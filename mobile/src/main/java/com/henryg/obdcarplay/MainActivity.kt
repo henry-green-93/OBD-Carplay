@@ -1,8 +1,11 @@
 package com.henryg.obdcarplay
 
+import android.content.Context
+import android.content.IntentFilter
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -35,7 +38,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.henryg.obdcarplay.ui.obdcluster.ObdNumericCluster
 import com.henryg.obdcarplay.ui.theme.OBDCarPlayTheme
 import com.henryg.obdcarplay.vm.ObdViewModel
-import kotlinx.coroutines.launch
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
     companion object {
@@ -44,12 +48,19 @@ class MainActivity : ComponentActivity() {
     }
 
     private lateinit var viewModel: ObdViewModel
+    private var usbPermissionReceiver: OBDUsbPermissionReceiver? = null
+    private var usbPermissionFuture: CompletableFuture<UsbDevice?>? = null
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         viewModel = ObdViewModel(baseContext)
         enableEdgeToEdge()
+
+        // Set up USB permission receiver
+        usbPermissionReceiver = OBDUsbPermissionReceiver()
+        viewModel.obdManager.setUsbPermissionFuture(usbPermissionFuture)
+
         setContent {
             OBDCarPlayTheme {
                 Scaffold(
@@ -85,13 +96,40 @@ class MainActivity : ComponentActivity() {
                         Log.d(TAG, "Starting OBD2 auto-connect sequence...")
                         val devices = viewModel.obdManager.getAvailableDevices()
                         Log.d(TAG, "Found ${devices.size} USB device(s)")
-                        
+
                         if (devices.isNotEmpty()) {
                             val device = devices.first()
                             try {
-                                // Try to connect with a 3-second timeout
-                                viewModel.connectOBDWithTimeout(device, 3000)
-                                Log.d(TAG, "Auto-connected to OBD2 adapter: ${device.deviceName}")
+                                // Register permission receiver and request permission
+                                usbPermissionFuture = CompletableFuture()
+                                val filter = IntentFilter(OBDUsbPermissionReceiver.ACTION_USB_PERMISSION_RESULT)
+                                @Suppress("DEPRECATION", "UnspecifiedRegisterReceiverFlag")
+                                registerReceiver(usbPermissionReceiver, filter, "0x00000000" /*RECEIVER_NOT_EXPORTED*/, null)
+
+                                val usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
+                                if (!usbManager.hasPermission(device)) {
+                                    Log.d(TAG, "Requesting USB permission for ${device.deviceName}")
+                                    usbManager.requestPermission(device, null)
+                                }
+
+
+
+                                // Wait up to 5 seconds for permission, then try connecting
+                                val permissionGranted = usbPermissionFuture?.get(5, TimeUnit.SECONDS) != null
+                                Log.d(TAG, "USB permission granted: $permissionGranted")
+
+                                if (permissionGranted) {
+                                    try {
+                                        viewModel.connectOBD(device)
+                                        Log.d(TAG, "Auto-connected to OBD2 adapter: ${device.deviceName}")
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "Connection failed: ${e.message}")
+                                        viewModel.useMockData()
+                                    }
+                                } else {
+                                    Log.d(TAG, "Permission timeout, starting mock data")
+                                    viewModel.useMockData()
+                                }
                             } catch (e: Exception) {
                                 Log.e(TAG, "Connection failed, falling back to mock data: ${e.message}")
                                 viewModel.useMockData()

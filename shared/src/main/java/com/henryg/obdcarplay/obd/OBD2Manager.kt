@@ -12,6 +12,7 @@ import com.henryg.obdcarplay.shared.ObdData
 import com.henryg.obdcarplay.shared.OBD2ConnectionStatus
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.util.concurrent.CompletableFuture
 
 /**
  * Manages the OBD2 reader lifecycle and PID polling loop.
@@ -273,6 +274,14 @@ class OBD2Manager(private val context: Context) {
      * Get the OBD2 reader for direct access if needed.
      */
     fun getReader(): OBD2Reader = reader
+
+    /**
+     * Set the CompletableFuture that will be completed when USB permission is granted/denied.
+     * Call this before connect() when no permission exists for the device.
+     */
+    fun setUsbPermissionFuture(future: CompletableFuture<UsbDevice?>?) {
+        reader.setUsbPermissionFuture(future)
+    }
 
     /**
      * Get available OBD2 devices.
