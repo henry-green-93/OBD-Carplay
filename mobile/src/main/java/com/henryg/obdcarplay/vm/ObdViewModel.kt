@@ -37,7 +37,8 @@ class ObdViewModel(
     }
 
     internal val obdManager = OBD2Manager(context)
-    private var mockMode = false
+    var isMockMode: Boolean = false
+        private set
 
     init {
         // Observe the manager's StateFlow and emit to UI with CoroutineExceptionHandler
@@ -62,7 +63,7 @@ class ObdViewModel(
      * Connect to a real OBD2 adapter via USB.
      */
     fun connectOBD(device: UsbDevice) {
-        mockMode = false
+        isMockMode = false
         isLive = true
         viewModelScope.launch {
             try {
@@ -82,7 +83,7 @@ class ObdViewModel(
      * Falls back to mock data if the connection times out.
      */
     fun connectOBDWithTimeout(device: UsbDevice, timeoutMillis: Long) {
-        mockMode = false
+        isMockMode = false
         isLive = true
         viewModelScope.launch {
             try {
@@ -101,7 +102,7 @@ class ObdViewModel(
      * Connect to the first available OBD2 adapter.
      */
     fun connectFirstAvailable() {
-        mockMode = false
+        isMockMode = false
         isLive = true
         viewModelScope.launch {
             try {
@@ -119,7 +120,7 @@ class ObdViewModel(
      * Switch to mock/simulated OBD data for testing.
      */
     fun useMockData() {
-        mockMode = true
+        isMockMode = true
         isLive = false
         obdManager.disconnect()
         startMockPolling()
@@ -131,7 +132,7 @@ class ObdViewModel(
      */
     private fun startMockPolling() {
         viewModelScope.launch(UncaughtExceptionHandler.coroutineExceptionHandler) {
-            while (mockMode) {
+            while (isMockMode) {
                 val timestamp = System.currentTimeMillis()
                 val waterTemp = 90 + ((timestamp % 10 - 5).toInt())
                 val oilTemp = 85 + ((timestamp % 7 - 3).toInt())
@@ -151,7 +152,7 @@ class ObdViewModel(
     }
 
     override fun startPolling() {
-        if (!mockMode) {
+        if (!isMockMode) {
             viewModelScope.launch(UncaughtExceptionHandler.coroutineExceptionHandler) {
                 obdManager.connectionStatus.collect { status ->
                     isLive = status is OBD2ConnectionStatus.EcUConnected || status is OBD2ConnectionStatus.UsbConnected

@@ -1,12 +1,29 @@
-*.iml
 .gradle
 /local.properties
+/build
+!**/src/main/**/build/
+
+# Android Studio
+*.iml
 /.idea
 .DS_Store
 build/
 !**/src/main/**/build/
+# Kotlin
 /.kotlin
+
+# Local
+/local.properties
+
+# Documentation
+*.md
+
+# Captures
 /captures
+# Continue AI
+/.continue
+/.continue/*
+/.continue/.*
 .externalNativeBuild
 .cxx
 local.properties
