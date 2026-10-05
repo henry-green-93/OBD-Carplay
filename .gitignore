@@ -9,6 +9,8 @@
 .DS_Store
 build/
 !**/src/main/**/build/
+/artifacts/**
+
 # Kotlin
 /.kotlin
 
