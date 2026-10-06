@@ -7,6 +7,7 @@ import android.content.Intent
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.util.Log
+import com.henryg.obdcarplay.obd.OBD2Reader
 
 /**
  * Broadcast receiver for USB device permission callbacks.
@@ -17,21 +18,19 @@ import android.util.Log
 class OBDUsbPermissionReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "OBDUsbPermission"
-        const val KEY_PERMISSION_GRANTED = "permission_granted"
-        const val ACTION_USB_PERMISSION_RESULT = "com.henryg.obdcarplay.USB_PERMISSION_RESULT"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
-        val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE) ?: return
+        val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE, UsbDevice::class.java) ?: return
 
         val granted = usbManager.hasPermission(device)
         Log.d(TAG, "USB permission ${if (granted) "granted" else "denied"} for ${device.deviceName}")
 
         // Send a sticky result intent back to OBD2Reader
-        val resultIntent = Intent(ACTION_USB_PERMISSION_RESULT)
+        val resultIntent = Intent(OBD2Reader.ACTION_USB_PERMISSION_RESULT)
         resultIntent.putExtra(UsbManager.EXTRA_DEVICE, device)
-        resultIntent.putExtra(KEY_PERMISSION_GRANTED, granted)
+        resultIntent.putExtra(OBD2Reader.KEY_PERMISSION_GRANTED, granted)
         setJobIntent(context, resultIntent)
     }
 
@@ -45,6 +44,7 @@ class OBDUsbPermissionReceiver : BroadcastReceiver() {
             0
         }
         @Suppress("DEPRECATION")
+        // TODO: Find replacement for deprecated method .getBroadcast()
         PendingIntent.getBroadcast(context, 0, intent, flags)
     }
 }

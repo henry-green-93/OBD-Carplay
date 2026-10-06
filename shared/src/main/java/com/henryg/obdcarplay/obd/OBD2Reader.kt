@@ -1,6 +1,9 @@
 package com.henryg.obdcarplay.obd
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.util.Log
@@ -82,6 +85,10 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
             "OBDLink" to 0x0403,
             "ELM" to 0x0403
         )
+
+        // USB permission broadcast constants
+        const val ACTION_USB_PERMISSION_RESULT = "com.henryg.obdcarplay.USB_PERMISSION_RESULT"
+        const val KEY_PERMISSION_GRANTED = "permission_granted"
     }
 
     private var usbManager: UsbManager? = null
@@ -94,6 +101,7 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
 
     // Used to wait for USB permission callback from OBDUsbPermissionReceiver
     private var usbPermissionFuture: CompletableFuture<UsbDevice?>? = null
+    private var usbPermissionReceiver: BroadcastReceiver? = null
 
     // Response buffer for incoming OBD2 data
     private var lastResponse: String? = null
@@ -195,6 +203,9 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
             UsbSerialPort.PARITY_NONE
         )
 
+        // Register broadcast receiver for USB permission result
+        registerPermissionReceiver()
+
         // Initialize ELM327 with overall timeout
         try {
             withTimeout(timeoutMillis) {
@@ -207,6 +218,50 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
 
         isConnected = true
         Log.d(TAG, "Connected to ${device.deviceName}")
+    }
+
+    /**
+     * Register a broadcast receiver for USB permission result callbacks.
+     */
+    private fun registerPermissionReceiver() {
+        val filter = IntentFilter(ACTION_USB_PERMISSION_RESULT)
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent) {
+                val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
+                val granted = intent.getBooleanExtra(KEY_PERMISSION_GRANTED, false)
+                Log.d(TAG, "USB permission broadcast: device=${device?.deviceName}, granted=$granted")
+
+                usbPermissionFuture?.let { future ->
+                    if (granted && device != null) {
+                        future.complete(device)
+                    } else {
+                        future.complete(null)
+                    }
+                }
+                // Unregister after receiving the callback
+                try {
+                    context?.unregisterReceiver(this)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Receiver already unregistered", e)
+                }
+            }
+        }
+        context.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+        usbPermissionReceiver = receiver
+    }
+
+    /**
+     * Unregister the USB permission broadcast receiver.
+     */
+    private fun unregisterPermissionReceiver() {
+        usbPermissionReceiver?.let { receiver ->
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (e: Exception) {
+                // Receiver may already be unregistered
+            }
+            usbPermissionReceiver = null
+        }
     }
 
     /**
@@ -356,6 +411,7 @@ class OBD2Reader(private val context: Context) : AutoCloseable {
         usbSerialPort?.close()
         usbSerialPort = null
         isConnected = false
+        unregisterPermissionReceiver()
         Log.d(TAG, "Disconnected from OBD2 adapter")
     }
 

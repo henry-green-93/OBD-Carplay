@@ -98,6 +98,10 @@ class OBD2Manager(private val context: Context) {
      */
     @Throws(IOException::class)
     suspend fun connect(device: UsbDevice, timeoutMillis: Long = 5000) = withContext(Dispatchers.IO) {
+        // Create a future to wait for USB permission callback
+        val permissionFuture = CompletableFuture<UsbDevice?>()
+        reader.setUsbPermissionFuture(permissionFuture)
+
         try {
             reader.connect(device, timeoutMillis)
             _connectionStatus.value = OBD2ConnectionStatus.UsbConnected(device.deviceName ?: "Unknown")
