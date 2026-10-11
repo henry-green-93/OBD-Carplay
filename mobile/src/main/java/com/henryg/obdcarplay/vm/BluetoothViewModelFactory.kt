@@ -1,17 +1,24 @@
 package com.henryg.obdcarplay.vm
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.henryg.obdcarplay.service.BluetoothService
-import com.henryg.obdcarplay.service.MockBluetoothService
+import com.henryg.obdcarplay.service.AndroidBleService
+import com.henryg.obdcarplay.shared.BluetoothService
+
 
 /**
  * Factory for creating BluetoothViewModel instances.
- * In a real app, this would inject dependencies via Hilt/Koin.
+ *
+ * @param context The application context for creating the AndroidBleService.
  */
 class BluetoothViewModelFactory(
-    private val bluetoothService: BluetoothService = MockBluetoothService()
+    private val context: Context
 ) : ViewModelProvider.Factory {
+
+    private val bluetoothService: AndroidBleService by lazy {
+        AndroidBleService(context.applicationContext)
+    }
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

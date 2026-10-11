@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.platform.LocalContext
 import com.henryg.obdcarplay.ui.components.DeviceListItem
 import com.henryg.obdcarplay.vm.BluetoothViewModel
 import com.henryg.obdcarplay.vm.BluetoothViewModelFactory
@@ -26,7 +27,7 @@ import com.henryg.obdcarplay.data.BleDevice
  */
 @Composable
 fun BluetoothScreen(
-    viewModel: BluetoothViewModel = viewModel(factory = BluetoothViewModelFactory()),
+    viewModel: BluetoothViewModel = viewModel(factory = BluetoothViewModelFactory(LocalContext.current)),
     paddingValues: PaddingValues = PaddingValues(0.dp),
 ) {
     // Observe the UI state from the ViewModel

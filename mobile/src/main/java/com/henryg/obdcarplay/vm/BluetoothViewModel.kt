@@ -2,8 +2,11 @@ package com.henryg.obdcarplay.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.henryg.obdcarplay.data.BleDevice
-import com.henryg.obdcarplay.service.BluetoothService
+import com.henryg.obdcarplay.shared.BleDevice
+import com.henryg.obdcarplay.shared.BluetoothConnectionStatus
+import com.henryg.obdcarplay.shared.BluetoothOBD2Manager
+import com.henryg.obdcarplay.shared.ObdData
+import com.henryg.obdcarplay.service.AndroidBleService
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -30,10 +33,10 @@ data class BluetoothUiState(
 /**
  * ViewModel responsible for managing the Bluetooth connection lifecycle.
  *
- * @param service The service layer responsible for actual Bluetooth operations.
+ * @param bluetoothService The Android BLE service.
  */
 class BluetoothViewModel(
-    private val bluetoothService: BluetoothService
+    private val bluetoothService: AndroidBleService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BluetoothUiState())
@@ -42,7 +45,6 @@ class BluetoothViewModel(
     init {
         // Load initial state or start a passive scan on initialization
         _uiState.update { it.copy(isLoading = true) }
-        // Assume service has a function to retrieve initial/cached devices
         viewModelScope.launch {
             _uiState.update { it.copy(availableDevices = bluetoothService.getAvailableDevices()) }
             _uiState.update { it.copy(isLoading = false) }
@@ -57,11 +59,10 @@ class BluetoothViewModel(
 
         _uiState.update { it.copy(connectionState = ConnectionState.Scanning, isLoading = true) }
         viewModelScope.launch {
-            // Listen to device updates from the service
+            bluetoothService.startScan()
             bluetoothService.observeDevices().collect { devices ->
                 _uiState.update { it.copy(availableDevices = devices) }
             }
-            // Update loading state when scan completes (or service signals completion)
             _uiState.update { it.copy(isLoading = false) }
         }
     }
@@ -81,7 +82,6 @@ class BluetoothViewModel(
                 if (success) {
                     _uiState.update { it.copy(connectionState = ConnectionState.Connected(device), isLoading = false) }
                 } else {
-                    // Connection failed, revert state
                     _uiState.update { it.copy(connectionState = ConnectionState.Disconnected, isLoading = false) }
                 }
             } catch (e: Exception) {
@@ -95,7 +95,7 @@ class BluetoothViewModel(
      * @param device The device to pair with.
      */
     fun pairDevice(device: BleDevice) {
-        if (_uiState.value.connectionState is ConnectionState.Connecting) return // Already trying to connect
+        if (_uiState.value.connectionState is ConnectionState.Connecting) return
 
         _uiState.update { it.copy(connectionState = ConnectionState.Connecting(device.name), isLoading = true) }
 
@@ -103,10 +103,8 @@ class BluetoothViewModel(
             try {
                 val success = bluetoothService.pairWithDevice(device)
                 if (success) {
-                    // If pairing is successful, often we connect immediately afterward
                     _uiState.update { it.copy(connectionState = ConnectionState.Connected(device), isLoading = false) }
                 } else {
-                    // Pairing failed, revert state
                     _uiState.update { it.copy(connectionState = ConnectionState.Disconnected, isLoading = false) }
                 }
             } catch (e: Exception) {

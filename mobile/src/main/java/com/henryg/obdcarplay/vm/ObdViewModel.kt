@@ -5,6 +5,7 @@ import android.hardware.usb.UsbDevice
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.henryg.obdcarplay.obd.OBD2Manager
+import com.henryg.obdcarplay.obd.UsbSerialTransport
 import com.henryg.obdcarplay.shared.OBD2ConnectionStatus
 import com.henryg.obdcarplay.shared.ObdData
 import com.henryg.obdcarplay.shared.ObdViewModelBase
@@ -36,13 +37,13 @@ class ObdViewModel(
         private const val TAG = "ObdViewModel"
     }
 
-    internal val obdManager = OBD2Manager(context)
+    private val usbTransport = UsbSerialTransport(context)
+    internal val obdManager = OBD2Manager(usbTransport)
     var isMockMode: Boolean = false
         private set
 
     init {
         // Observe the manager's StateFlow and emit to UI with CoroutineExceptionHandler
-        // Remove try/catch so exceptions propagate to the handler
         viewModelScope.launch(UncaughtExceptionHandler.coroutineExceptionHandler) {
             obdManager.obdData.collect { data ->
                 updateObdData(data)
@@ -50,7 +51,6 @@ class ObdViewModel(
         }
 
         // Also observe connection status with CoroutineExceptionHandler
-        // Remove try/catch so exceptions propagate to the handler
         viewModelScope.launch(UncaughtExceptionHandler.coroutineExceptionHandler) {
             obdManager.connectionStatus.collect { status ->
                 isLive = status is OBD2ConnectionStatus.EcUConnected || status is OBD2ConnectionStatus.UsbConnected
@@ -65,9 +65,10 @@ class ObdViewModel(
     fun connectOBD(device: UsbDevice) {
         isMockMode = false
         isLive = true
+        usbTransport.setDevice(device)
         viewModelScope.launch {
             try {
-                obdManager.connect(device)
+                obdManager.connect()
                 Log.d(TAG, "Connected to OBD2 adapter")
             } catch (e: IOException) {
                 Log.e(TAG, "Failed to connect to OBD2 adapter: ${e.message}")
@@ -85,9 +86,10 @@ class ObdViewModel(
     fun connectOBDWithTimeout(device: UsbDevice, timeoutMillis: Long) {
         isMockMode = false
         isLive = true
+        usbTransport.setDevice(device)
         viewModelScope.launch {
             try {
-                obdManager.connect(device, timeoutMillis)
+                obdManager.connect()
                 Log.d(TAG, "Connected to OBD2 adapter with timeout")
             } catch (e: IOException) {
                 Log.e(TAG, "Connection timed out or failed: ${e.message}")
@@ -106,7 +108,8 @@ class ObdViewModel(
         isLive = true
         viewModelScope.launch {
             try {
-                obdManager.connectFirstAvailable()
+                usbTransport.connectFirstAvailable()
+                obdManager.connect()
                 Log.d(TAG, "Connected to first available OBD2 adapter")
             } catch (e: IOException) {
                 Log.e(TAG, "No OBD2 adapter found, using mock data")

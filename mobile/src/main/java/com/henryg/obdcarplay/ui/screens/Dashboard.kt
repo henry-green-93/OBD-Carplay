@@ -6,6 +6,8 @@ import android.graphics.Paint.Align
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,6 +25,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.henryg.obdcarplay.ui.components.DeviceListItem
+import androidx.compose.foundation.lazy.items
+import com.henryg.obdcarplay.vm.BluetoothViewModel
+import com.henryg.obdcarplay.vm.BluetoothViewModelFactory
+import com.henryg.obdcarplay.vm.ConnectionState
 import com.henryg.obdcarplay.data.BleDevice
 import com.henryg.obdcarplay.data.BleDeviceCard
 import com.henryg.obdcarplay.shared.OBD2ConnectionStatus
@@ -643,49 +650,54 @@ private fun UsbDeviceCard(
 }
 
 /**
- * Bluetooth connection panel with stubbed device list.
+ * Bluetooth connection panel with real BLE scanning.
  */
 @Composable
 private fun BluetoothConnectionPanel() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Icon(
-                Icons.Default.Bluetooth,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(32.dp).align(Alignment.CenterHorizontally)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Bluetooth OBD2 Adapters",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Real Bluetooth scanning coming soon. For now, use USB or Mock data.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+    val context = LocalContext.current
+    val viewModel: BluetoothViewModel = viewModel(factory = BluetoothViewModelFactory(context))
+    val uiState by viewModel.uiState.collectAsState()
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Show mock devices as placeholder
-            BleDevice.MockDevices.forEach { device ->
-                Spacer(modifier = Modifier.height(8.dp))
-                BleDeviceCard(
-                    device = device,
-                    onClick = {},
-                    onConnect = {},
-                    onPair = {}
-                )
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Scan button
+        Button(
+            onClick = viewModel::startScan,
+            enabled = uiState.connectionState !is ConnectionState.Scanning,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (uiState.connectionState is ConnectionState.Scanning) {
+                CircularProgressIndicator(Modifier.size(24.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Scanning...")
+            } else {
+                Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Scan for Devices")
             }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Device list
+        if (uiState.availableDevices.isNotEmpty()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(uiState.availableDevices) { device: com.henryg.obdcarplay.shared.BleDevice ->
+                    com.henryg.obdcarplay.ui.components.DeviceListItem(
+                        device = device,
+                        onConnectClicked = { viewModel.connectDevice(device) },
+                        onPairClicked = { viewModel.pairDevice(device) }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        } else if (uiState.connectionState !is ConnectionState.Scanning) {
+            Text(
+                text = "No devices found. Tap 'Scan for Devices' to search.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

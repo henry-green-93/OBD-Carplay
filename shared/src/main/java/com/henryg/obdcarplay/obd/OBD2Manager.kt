@@ -2,12 +2,14 @@ package com.henryg.obdcarplay.obd
 
 import android.content.Context
 import android.hardware.usb.UsbDevice
-import android.hardware.usb.UsbManager
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import com.henryg.obdcarplay.shared.ObdData
 import com.henryg.obdcarplay.shared.OBD2ConnectionStatus
 import kotlinx.coroutines.withContext
@@ -15,10 +17,10 @@ import java.io.IOException
 import java.util.concurrent.CompletableFuture
 
 /**
- * Manages the OBD2 reader lifecycle and PID polling loop.
+ * Manages the OBD2 transport layer and PID polling loop.
  *
- * Connects to an ELM327 adapter via USB, polls PIDs at ~60Hz,
- * and updates the StateFlow with decoded OBD data.
+ * Supports both USB-serial and BLE transports via the [Transport] interface.
+ * Polls PIDs at ~15.6Hz and emits decoded OBD data through [obdData].
  *
  * PID polling strategy:
  * - Water Temp (01 05), Oil Temp (01 5C), AFR (01 44), Boost (01 0B)
@@ -27,27 +29,32 @@ import java.util.concurrent.CompletableFuture
  *
  * Usage:
  * ```
- * val manager = OBD2Manager(context)
- * manager.connect(device)
- * val data = manager.obdData.collectAsState() // ObdData with real values
- * manager.disconnect()
+ * // For USB:
+ * val transport = UsbSerialTransport(context)
+ * transport.setDevice(usbDevice)
+ * val manager = OBD2Manager(transport)
+ * manager.connect()
+ *
+ * // For BLE:
+ * val transport = BleTransport(context, device)
+ * val manager = OBD2Manager(transport)
+ * manager.connect()
  * ```
  */
-class OBD2Manager(private val context: Context) {
+class OBD2Manager(private val transport: Transport) {
 
     companion object {
         private const val TAG = "OBD2Manager"
 
         // PID commands for our 4 metrics
         private val PID_COMMANDS = listOf(
-            OBD2Reader.PID_WATER_TEMP to "waterTemp",
+            UsbSerialTransport.PIDs["waterTemp"]!! to "waterTemp",
             "01 5C" to "oilTemp",
-            OBD2Reader.PID_AIR_FUEL_RATIO to "afr",
-            OBD2Reader.PID_BOOST_KPA to "boostKpa"
+            UsbSerialTransport.PIDs["airFuelRatio"]!! to "afr",
+            UsbSerialTransport.PIDs["boostKpa"]!! to "boostKpa"
         )
     }
 
-    private val reader = OBD2Reader(context)
     private val parser = OBD2PidParser()
 
     // Current decoded values
@@ -90,22 +97,15 @@ class OBD2Manager(private val context: Context) {
     private val cycleSize = PID_COMMANDS.size
 
     /**
-     * Connect to an OBD2 adapter with timeout.
-     *
-     * @param device The USB device to connect to
-     * @param timeoutMillis Connection timeout in milliseconds (default: 5000ms)
-     * @throws IOException if connection fails or times out
+     * Connect the transport and start polling.
      */
     @Throws(IOException::class)
-    suspend fun connect(device: UsbDevice, timeoutMillis: Long = 5000) = withContext(Dispatchers.IO) {
-        // Create a future to wait for USB permission callback
-        val permissionFuture = CompletableFuture<UsbDevice?>()
-        reader.setUsbPermissionFuture(permissionFuture)
-
+    suspend fun connect() = withContext(Dispatchers.IO) {
         try {
-            reader.connect(device, timeoutMillis)
-            _connectionStatus.value = OBD2ConnectionStatus.UsbConnected(device.deviceName ?: "Unknown")
-            Log.d(TAG, "Connected to OBD2 adapter: ${device.deviceName}")
+            transport.open()
+            val deviceName = transport.deviceName ?: "Unknown"
+            _connectionStatus.value = OBD2ConnectionStatus.UsbConnected(deviceName)
+            Log.d(TAG, "Connected to OBD2 adapter: $deviceName")
             startPolling()
         } catch (e: IOException) {
             _connectionStatus.value = OBD2ConnectionStatus.Error(e.message ?: "Connection failed")
@@ -115,50 +115,33 @@ class OBD2Manager(private val context: Context) {
     }
 
     /**
-     * Connect to the first available OBD2 adapter with timeout.
-     *
-     * @param timeoutMillis Connection timeout in milliseconds (default: 5000ms)
-     * @throws IOException if connection fails or times out
-     */
-    @Throws(IOException::class)
-    suspend fun connectFirstAvailable(timeoutMillis: Long = 5000) = withContext(Dispatchers.IO) {
-        val available = reader.getAvailableDevices()
-        if (available.isEmpty()) {
-            Log.d(TAG, "No OBD2 adapters found")
-            _connectionStatus.value = OBD2ConnectionStatus.Disconnected
-            disconnect()
-            throw IOException("No OBD2 adapters found")
-        }
-        connect(available.first(), timeoutMillis)
-    }
-
-    /**
      * Start the PID polling loop.
      */
     private fun startPolling() {
         if (isPolling) return
         isPolling = true
 
-        // Launch polling coroutine
-        Thread {
+        // Launch polling in a coroutine scope
+        val scope = kotlinx.coroutines.CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
+        scope.launch {
             pollLoop()
-        }.start()
+        }
     }
 
     /**
      * Main polling loop. Polls PIDs sequentially.
      */
-    private fun pollLoop() {
+    private suspend fun pollLoop() {
         var cycleCount = 0
 
-        while (isPolling && reader.isConnected()) {
+        while (isPolling && transport.isConnected()) {
             try {
                 // Poll each PID sequentially
                 for ((pid, label) in PID_COMMANDS) {
                     if (!isPolling) break
 
                     // Send PID command and parse response
-                    val response = reader.sendCommand(pid)
+                    val response = transport.sendCommand(pid)
                     val parsed = parser.parse(pid, response)
 
                     // Update the appropriate field based on label
@@ -167,7 +150,7 @@ class OBD2Manager(private val context: Context) {
                         successfulPidCount++
                         // Once we have at least one successful PID, mark ECU as connected
                         if (successfulPidCount == 1) {
-                            val deviceName = reader.deviceName ?: "Unknown"
+                            val deviceName = transport.deviceName ?: "Unknown"
                             _connectionStatus.value = OBD2ConnectionStatus.EcUConnected(deviceName)
                         }
                     }
@@ -175,20 +158,20 @@ class OBD2Manager(private val context: Context) {
                     cycleCount++
 
                     // ~16ms between PID polls (~60Hz)
-                    Thread.sleep(16)
+                    kotlinx.coroutines.delay(16)
                 }
 
                 // After full cycle, emit the combined state
                 emitState()
 
                 // Small pause between full cycles (~4ms)
-                Thread.sleep(4)
+                kotlinx.coroutines.delay(4)
 
             } catch (e: IOException) {
                 Log.e(TAG, "Polling error", e)
                 _connectionStatus.value = OBD2ConnectionStatus.Error(e.message ?: "Polling error")
                 // Reconnect on error
-                Thread.sleep(500)
+                kotlinx.coroutines.delay(500)
             }
         }
     }
@@ -261,7 +244,7 @@ class OBD2Manager(private val context: Context) {
      */
     fun disconnect() {
         isPolling = false
-        reader.disconnect()
+        transport.close()
         _connectionStatus.value = OBD2ConnectionStatus.Disconnected
         _obdData.value = createEmptyObdData()
         Log.d(TAG, "Disconnected from OBD2 adapter")
@@ -270,27 +253,28 @@ class OBD2Manager(private val context: Context) {
     /**
      * Check if the OBD2 adapter is responding.
      */
-    fun ping(): Boolean {
-        return reader.ping()
-    }
+    suspend fun ping(): Boolean = transport.ping()
 
     /**
-     * Get the OBD2 reader for direct access if needed.
+     * Get the underlying transport for direct access if needed.
      */
-    fun getReader(): OBD2Reader = reader
+    fun getTransport(): Transport = transport
 
     /**
-     * Set the CompletableFuture that will be completed when USB permission is granted/denied.
-     * Call this before connect() when no permission exists for the device.
-     */
-    fun setUsbPermissionFuture(future: CompletableFuture<UsbDevice?>?) {
-        reader.setUsbPermissionFuture(future)
-    }
-
-    /**
-     * Get available OBD2 devices.
+     * Get available OBD2 devices (USB only).
      */
     fun getAvailableDevices(): List<UsbDevice> {
-        return reader.getAvailableDevices()
+        return (transport as? UsbSerialTransport)?.getAvailableDevices() ?: emptyList()
     }
+}
+
+/**
+ * Convenience factory that creates an [OBD2Manager] with a [UsbSerialTransport].
+ *
+ * Use this when connecting via USB — for BLE, construct [Transport] manually
+ * and pass it to the [OBD2Manager] constructor directly.
+ */
+fun OBD2Manager.Companion.createUsbManager(context: Context): OBD2Manager {
+    val transport = UsbSerialTransport(context)
+    return OBD2Manager(transport)
 }

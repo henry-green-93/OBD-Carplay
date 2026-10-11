@@ -1,6 +1,7 @@
 package com.henryg.obdcarplay.service
 
-import com.henryg.obdcarplay.data.BleDevice
+import com.henryg.obdcarplay.shared.BluetoothService as SharedBluetoothService
+import com.henryg.obdcarplay.shared.BleDevice
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,36 +13,36 @@ import java.util.concurrent.ConcurrentHashMap
  * Interface for the Bluetooth service layer, handling low-level Bluetooth operations.
  * This interface is shared/expected by all modules needing Bluetooth functionality.
  */
-interface BluetoothService {
+interface BluetoothService : SharedBluetoothService {
 
     /**
      * Retrieves a list of currently known/discovered devices.
      * In a real scenario, this would query the Android BluetoothAdapter.
      */
-    fun getAvailableDevices(): List<BleDevice>
+    override fun getAvailableDevices(): List<BleDevice>
 
     /**
      * Observes changes to the list of available devices (e.g., when scanning).
      * @return A Flow that emits the current list of devices.
      */
-    fun observeDevices(): Flow<List<BleDevice>>
+    override fun observeDevices(): Flow<List<BleDevice>>
 
     /**
      * Initiates the connection handshake with a device.
      * @return True if connection started successfully, false otherwise.
      */
-    suspend fun connectToDevice(device: BleDevice): Boolean
+    override suspend fun connectToDevice(device: BleDevice): Boolean
 
     /**
-     * Initiates the pairing process for a specified device.
+     * Initiates the pairing process for a device.
      * @return True if pairing initiated successfully, false otherwise.
      */
-    suspend fun pairWithDevice(device: BleDevice): Boolean
+    override suspend fun pairWithDevice(device: BleDevice): Boolean
 
     /**
      * Disconnects from the currently active device and cleans up resources.
      */
-    suspend fun disconnect()
+    override suspend fun disconnect()
 }
 
 /**

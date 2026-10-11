@@ -1,6 +1,8 @@
 package com.henryg.obdcarplay.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -10,13 +12,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.henryg.obdcarplay.ui.components.DeviceListItem
 import com.henryg.obdcarplay.viewmodel.BluetoothViewModel
 import com.henryg.obdcarplay.viewmodel.ConnectionState
 import com.henryg.obdcarplay.viewmodel.BluetoothUiState
-import com.henryg.obdcarplay.data.BleDevice
-import com.henryg.obdcarplay.viewmodel.BluetoothViewModelFactory // Assuming a factory exists
+import com.henryg.obdcarplay.shared.BleDevice
 
 /**
  * Main screen for managing Bluetooth connections to OBD2 adapters.
@@ -25,11 +25,12 @@ import com.henryg.obdcarplay.viewmodel.BluetoothViewModelFactory // Assuming a f
  */
 @Composable
 fun BluetoothScreen(
-    viewModel: BluetoothViewModel = viewModel(factory = BluetoothViewModelFactory()) // Assuming this factory exists
+    viewModel: BluetoothViewModel
 ) {
     // Observe the UI state from the ViewModel
     val uiState by viewModel.uiState.collectAsState()
 
+    @OptIn(ExperimentalMaterial3Api::class)
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("OBD2 Bluetooth") })
@@ -87,11 +88,11 @@ fun ConnectionStatusCard(state: ConnectionState) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             val (icon, title, description) = when (state) {
-                is ConnectionState.Disconnected -> (Icons.Default.SignalOff, "Disconnected", "Tap Scan to find an OBD2 adapter.")
-                is ConnectionState.Scanning -> (Icons.Default.Search, "Scanning...", "Searching for nearby devices...")
-                is ConnectionState.Connecting -> (Icons.Default.Build, "Connecting to ${state.deviceName}", "Attempting connection...")
-                is ConnectionState.Connected -> (Icons.Default.CheckCircle, "Connected", "Successfully paired and connected!")
-                is ConnectionState.Error -> (Icons.Default.Error, "Error", state.message)
+                is ConnectionState.Disconnected -> Triple(Icons.Default.BluetoothDisabled, "Disconnected", "Tap Scan to find an OBD2 adapter.")
+                is ConnectionState.Scanning -> Triple(Icons.Default.Search, "Scanning...", "Searching for nearby devices...")
+                is ConnectionState.Connecting -> Triple(Icons.Default.Build, "Connecting to ${state.deviceName}", "Attempting connection...")
+                is ConnectionState.Connected -> Triple(Icons.Default.CheckCircle, "Connected", "Successfully paired and connected!")
+                is ConnectionState.Error -> Triple(Icons.Default.Error, "Error", state.message)
             }
 
             Icon(icon, contentDescription = title, tint = MaterialTheme.colorScheme.onPrimaryContainer)
@@ -113,7 +114,7 @@ fun ScanButton(
 ) {
     val buttonText = when (state) {
         ConnectionState.Disconnected -> "Scan for Devices"
-        ConnectionState.Connected(_) -> "Rescan Devices"
+        is ConnectionState.Connected -> "Rescan Devices"
         ConnectionState.Scanning -> "Scanning..." // Already handled by state, but good for explicit state
         is ConnectionState.Connecting -> "Wait..."
         is ConnectionState.Error -> "Try Again"
@@ -145,7 +146,7 @@ fun DeviceList(
         LazyColumn(
             modifier = Modifier.fillMaxWidth()
         ) {
-            items(devices) { device ->
+            items(devices) { device: BleDevice ->
                 // We will use a custom item that allows choosing between connect/pair
                 DeviceListItem(
                     device = device,

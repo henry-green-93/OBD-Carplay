@@ -3,14 +3,15 @@ package com.henryg.obdcarplay.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.henryg.obdcarplay.data.BleDevice
+import com.henryg.obdcarplay.shared.BleDevice
 
 /**
  * A clickable item representing a single Bluetooth OBD2 device.
@@ -62,7 +63,7 @@ fun DeviceListItem(
 
             // 2. Action Buttons
             Row(
-                modifier = Modifier.onePxHeight().padding(start = 12.dp),
+                modifier = Modifier.height(48.dp).padding(start = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Pair Button (Secondary Action)
@@ -86,4 +87,12 @@ fun DeviceListItem(
             }
         }
     }
+}
+
+/**
+ * Extension to add a 1-pixel height modifier.
+ */
+@Composable
+private fun Modifier.onePxHeight(): Modifier {
+    return this.height(1.dp)
 }

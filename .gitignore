@@ -33,4 +33,4 @@ local.properties
 # build folders
 /shared/build/**
 /mobile/build/**
-/automotiv/build/**
+/automotive/build/**

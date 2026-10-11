@@ -9,6 +9,12 @@
         android:name="android.hardware.type.automotive"
         android:required="true" />
 
+    <!-- BLE permissions for OBD2 adapter discovery and connection -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
     <application
         android:allowBackup="true"
         android:appCategory="audio"
